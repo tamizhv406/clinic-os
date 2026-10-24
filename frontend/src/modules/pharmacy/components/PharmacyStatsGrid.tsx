@@ -1,0 +1,5 @@
+import { AlertTriangle, BadgeIndianRupee, FileText, PackageX, ReceiptIndianRupee, ShoppingCart } from "lucide-react";
+import { StatsCard } from "../../../components/ui";
+import type { PharmacyStats } from "../types";
+import { rupee } from "../utils";
+export function PharmacyStatsGrid({ stats }: { stats: PharmacyStats }) { return <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6"><StatsCard label="Pending Prescriptions" value={String(stats.pendingPrescriptions)} icon={FileText} tone="amber" /><StatsCard label="Today Pharmacy Sales" value={rupee(stats.todaySales)} icon={BadgeIndianRupee} /><StatsCard label="Low Stock Medicines" value={String(stats.lowStock)} icon={PackageX} tone="violet" /><StatsCard label="Expiring Soon" value={String(stats.expiringSoon)} icon={AlertTriangle} tone="amber" /><StatsCard label="Out of Stock" value={String(stats.outOfStock)} icon={ShoppingCart} tone="violet" /><StatsCard label="Bills Today" value={String(stats.billsToday)} icon={ReceiptIndianRupee} /></div>; }

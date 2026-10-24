@@ -1,0 +1,5 @@
+export type TabItem = { id: string; label: string };
+export function Tabs({ items, value, onChange, variant = "underline" }: { items: TabItem[]; value: string; onChange: (id: string) => void; variant?: "underline" | "segmented" }) {
+  if (variant === "segmented") return <div className="flex gap-1 overflow-x-auto rounded-lg border bg-white p-1" role="tablist">{items.map((item) => <button key={item.id} role="tab" aria-selected={value === item.id} onClick={() => onChange(item.id)} className={`min-h-9 whitespace-nowrap rounded-md px-3 text-sm font-medium transition-colors ${value === item.id ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>{item.label}</button>)}</div>;
+  return <div className="flex gap-4 overflow-x-auto border-b border-slate-200" role="tablist">{items.map((item) => <button key={item.id} role="tab" aria-selected={value === item.id} onClick={() => onChange(item.id)} className={`min-h-10 shrink-0 border-b-2 px-1 text-sm font-medium transition-colors ${value === item.id ? "border-brand-600 text-brand-700" : "border-transparent text-slate-500 hover:text-slate-800"}`}>{item.label}</button>)}</div>;
+}

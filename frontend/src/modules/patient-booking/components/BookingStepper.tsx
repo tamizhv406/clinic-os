@@ -1,0 +1,2 @@
+const steps = ["Choose Doctor", "Select Service", "Pick Date & Time", "Enter Patient Details", "Confirm Appointment"];
+export function BookingStepper({ current }: { current: number }) { return <div className="flex gap-2 overflow-auto pb-2">{steps.map((step, index) => <div key={step} className={`min-w-fit rounded-full px-3 py-2 text-xs font-semibold ${index === current ? "bg-brand-600 text-white" : index < current ? "bg-brand-50 text-brand-700" : "bg-slate-100 text-slate-500"}`}>{index + 1}. {step}</div>)}</div>; }

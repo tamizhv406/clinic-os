@@ -1,0 +1,2 @@
+import { ReceiptIndianRupee } from "lucide-react";
+export function BillingEmptyState({ title = "No invoices found", description = "Try changing filters or create a new bill." }: { title?: string; description?: string }) { return <div className="rounded-xl border border-dashed bg-white p-8 text-center"><ReceiptIndianRupee className="mx-auto size-8 text-slate-400" /><h3 className="mt-3 font-semibold">{title}</h3><p className="mt-1 text-sm text-slate-500">{description}</p></div>; }

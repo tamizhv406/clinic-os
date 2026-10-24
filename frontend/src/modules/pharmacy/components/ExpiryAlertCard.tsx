@@ -1,0 +1,5 @@
+import { Button } from "../../../components/ui";
+import type { Medicine } from "../types";
+import { daysRemaining, rupee } from "../utils";
+import { StockStatusBadge } from "./StockStatusBadge";
+export function ExpiryAlertCard({ medicine }: { medicine: Medicine }) { const days = daysRemaining(medicine.expiryDate); return <div className="card p-4"><div className="flex justify-between gap-4"><div><h3 className="font-semibold">{medicine.name}</h3><p className="text-sm text-slate-500">Batch {medicine.batchNumber} · Expiry {medicine.expiryDate}</p></div><StockStatusBadge status={medicine.stockStatus} /></div><div className="mt-3 grid grid-cols-2 gap-2 text-sm"><p>Days remaining: <b>{days}</b></p><p>Stock: <b>{medicine.currentStock}</b></p><p>Value at risk: <b>{rupee(medicine.currentStock * medicine.purchasePrice)}</b></p></div><div className="mt-4 flex flex-wrap gap-2"><Button variant="secondary" disabled title="Coming soon">Mark for return</Button><Button variant="ghost" disabled title="Coming soon">Create adjustment</Button><Button variant="ghost" disabled title="Coming soon">Contact supplier</Button></div></div>; }

@@ -1,0 +1,21 @@
+export type WhatsAppTemplateStatus = "active" | "draft" | "needs_api_approval" | "disabled";
+export type WhatsAppTemplateCategory = "booking" | "reminder" | "payment" | "follow_up" | "review" | "cancellation";
+export type WhatsAppConversationStatus = "new" | "in_progress" | "appointment_confirmed" | "waiting_for_patient" | "transferred_to_reception" | "closed" | "failed";
+export type WhatsAppMessageSender = "patient" | "bot" | "reception";
+export type WhatsAppProvider = "meta_cloud_api" | "interakt" | "aisensy" | "wati" | "gupshup" | "twilio";
+export type ClinicMode = "single_speciality" | "multi_speciality";
+export type ClinicDepartment = "dermatology" | "orthopaedics" | "dental" | "pediatrics" | "general_medicine" | "physiotherapy" | "hair_clinic" | "other";
+export type WhatsAppBookingStep = "welcome" | "select_action" | "select_department" | "select_doctor" | "select_date" | "select_slot" | "collect_patient_details" | "collect_problem" | "review_booking" | "confirmed" | "transferred_to_reception";
+
+export type WhatsAppBookingStats = { bookingRequests: number; appointmentsConfirmed: number; pendingConversations: number; remindersScheduled: number; failedMessages: number; templatesActive: number };
+export type WhatsAppFlowStep = { id: string; title: string; description: string; sampleMessage: string };
+export type WhatsAppTemplate = { id: string; name: string; category: WhatsAppTemplateCategory; status: WhatsAppTemplateStatus; previewText: string; variables: string[]; lastUpdated: string };
+export type WhatsAppMessage = { id: string; sender: WhatsAppMessageSender; text: string; time: string };
+export type WhatsAppBookingSummary = { token: string; patientName: string; doctorName: string; service: string; dateTime: string };
+export type WhatsAppConversation = { id: string; patientName?: string; phone: string; lastMessage: string; currentStep: string; status: WhatsAppConversationStatus; source: "whatsapp" | "qr" | "website"; appointmentToken?: string; lastUpdated: string; messages: WhatsAppMessage[]; bookingSummary?: WhatsAppBookingSummary };
+export type WhatsAppDoctor = { id: string; name: string; qualification: string; department: ClinicDepartment; specialisation: string; consultationFee: number; nextAvailableSlot: string };
+export type WhatsAppAvailability = { doctorId: string; dates: { date: string; label: string; slots: string[] }[] };
+export type WhatsAppPatientDraft = { fullName: string; age: number; gender: "female" | "male" | "other"; mainProblem: string; existingPatient: boolean; phone: string; whatsappNumber: string };
+export type WhatsAppConfirmedAppointment = { appointmentId: string; tokenNumber: string; patientName: string; phone: string; whatsappNumber: string; age: number; gender: "female" | "male" | "other"; department: ClinicDepartment; doctorId: string; doctorName: string; appointmentDate: string; appointmentTime: string; mainProblem: string; source: "whatsapp"; status: "booked" | "waiting"; isNewPatient: boolean; reminderStatus: string };
+export type WhatsAppBookingSimulation = { clinicMode: ClinicMode; selectedClinic: string; selectedDepartment?: ClinicDepartment; selectedDoctor: string; selectedService: string; selectedSlot: string; patientDetails: string; currentStep: WhatsAppBookingStep; messages: WhatsAppMessage[]; confirmedAppointment: WhatsAppConfirmedAppointment };
+export type WhatsAppBookingSettings = { businessNumber: string; displayName: string; businessProfileStatus: string; clinicMode: ClinicMode; enableBooking: boolean; allowExistingPatientLookup: boolean; requirePaymentBeforeConfirmation: boolean; autoCreateAppointment: boolean; sendReminderBeforeAppointment: boolean; reminderTiming: string; reminderTemplate: string; followUpReminder: boolean; handoffOnStaff: boolean; handoffAfterFailedAttempts: boolean; receptionContactDisplay: string; apiStatus: "not_connected" | "connected"; provider: WhatsAppProvider };

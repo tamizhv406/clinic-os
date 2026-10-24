@@ -1,0 +1,11 @@
+import { StatusBadge } from "../../../components/common/StatusBadge";
+import { MessageCircle } from "lucide-react";
+import { Button } from "../../../components/ui";
+import type { DoctorQueueItem } from "../types";
+import { ageGender } from "../utils";
+import { PatientTagBadge, QueueStatusBadge } from "./StatusBadge";
+
+export function DoctorQueueCard({ item }: { item: DoctorQueueItem }) {
+  const isWhatsApp = item.source.toLowerCase() === "whatsapp";
+  return <div className={`rounded-xl border bg-white p-4 shadow-card ${isWhatsApp ? "border-brand-200" : ""}`}><div className="flex items-start justify-between"><div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Token {item.token}</p><h3 className="mt-1 font-['Manrope'] text-lg font-semibold">{item.patientName}</h3><p className="text-xs text-slate-500">{ageGender(item.age, item.gender)} - {item.source}{item.appointmentTime ? ` - ${item.appointmentTime}` : ""}</p></div><QueueStatusBadge status={item.status} /></div>{isWhatsApp && <div className="mt-3 flex flex-wrap gap-2"><StatusBadge tone="info"><MessageCircle className="size-3" /> WhatsApp booking</StatusBadge><StatusBadge>{item.department?.replace("_", " ")}</StatusBadge><StatusBadge tone={item.isNewPatient ? "info" : "neutral"}>{item.isNewPatient ? "New patient" : "Existing patient"}</StatusBadge></div>}<p className="mt-3 text-sm text-slate-700">{item.mainProblem ?? item.reason}</p>{item.reminderStatus && <p className="mt-2 rounded-xl bg-slate-50 p-2 text-xs font-semibold text-slate-600">{item.reminderStatus}</p>}<div className="mt-3 flex flex-wrap gap-2">{item.previousVisit && <StatusBadge>Previous Visit</StatusBadge>}{item.tags.map((tag) => <PatientTagBadge key={tag} tag={tag} />)}</div><p className="mt-3 text-xs font-semibold text-warning-700">{item.waitingMinutes} mins waiting</p><div className="mt-4 flex flex-wrap gap-2"><Button to={`/doctor/consultation/${item.patientId}${item.appointmentId ? `?appointmentId=${item.appointmentId}` : ""}`}>Start Consultation</Button>{isWhatsApp && <Button variant="secondary" disabled title="Coming soon">View WhatsApp details</Button>}<Button to={`/doctor/patient/${item.patientId}`} variant="secondary">View Profile</Button><Button to={`/doctor/prescription/${item.patientId}`} variant="ghost">Previous Rx</Button></div></div>;
+}

@@ -1,0 +1,3 @@
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
+import { chartTheme } from "../../../utils/chartTheme";
+export function AppointmentStatusChart({ data }: { data: { name: string; value: number }[] }) { const colors = [chartTheme.teal, chartTheme.warning, chartTheme.danger, chartTheme.neutral]; return <div className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={data} dataKey="value" nameKey="name" outerRadius={90}>{data.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div>; }

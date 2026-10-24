@@ -1,0 +1,2 @@
+import type { AvailableDate } from "../types";
+export function DateSelector({ dates, selectedId, onSelect }: { dates: AvailableDate[]; selectedId: string; onSelect: (id: string) => void }) { return <div className="flex gap-2 overflow-auto pb-2">{dates.map((d) => <button key={d.id} disabled={!d.available} onClick={() => onSelect(d.id)} className={`min-w-32 rounded-xl border px-4 py-3 text-sm font-semibold disabled:opacity-40 ${selectedId === d.id ? "border-brand-600 bg-brand-600 text-white" : "bg-white"}`}>{d.label}</button>)}</div>; }

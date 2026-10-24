@@ -1,0 +1,4 @@
+import { StatusBadge } from "../../../components/common/StatusBadge";
+import { Button } from "../../../components/ui";
+import type { Medicine } from "../types";
+export function LowStockAlertCard({ medicine }: { medicine: Medicine }) { const suggested = Math.max(medicine.reorderLevel * 2 - medicine.currentStock, medicine.reorderLevel); return <div className="card p-4"><div className="flex justify-between gap-4"><div><h3 className="font-semibold">{medicine.name}</h3><p className="text-sm text-slate-500">{medicine.category} · {medicine.supplier}</p></div><StatusBadge tone="warning">Stock running low</StatusBadge></div><div className="mt-3 grid grid-cols-2 gap-2 text-sm"><p>Current: <b>{medicine.currentStock}</b></p><p>Reorder: <b>{medicine.reorderLevel}</b></p><p>Suggested: <b>{suggested}</b></p><p>Last purchase: <b>{medicine.lastPurchaseDate}</b></p></div><Button className="mt-4" variant="secondary" to="/pharmacy/add-stock">Quick purchase entry</Button></div>; }

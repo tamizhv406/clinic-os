@@ -1,0 +1,4 @@
+import { Copy } from "lucide-react";
+import { Button } from "../../../components/ui";
+import type { ClinicBookingProfile } from "../types";
+export function QRBookingCard({ clinic }: { clinic: ClinicBookingProfile }) { return <div className="rounded-xl border bg-white p-5"><h2 className="font-semibold">Scan to book appointment</h2><div className="mx-auto my-5 grid size-40 grid-cols-5 gap-1 rounded-xl bg-slate-900 p-3">{Array.from({ length: 25 }).map((_, i) => <span key={i} className={`rounded-sm ${[0,1,5,6,18,19,23,24,12,8,16].includes(i) ? "bg-white" : "bg-slate-700"}`} />)}</div><p className="rounded-xl bg-slate-50 p-3 text-center text-sm font-semibold text-slate-600">{clinic.bookingUrl}</p><Button className="mt-4 w-full" variant="secondary" icon={<Copy className="size-4" />} onClick={() => { void navigator.clipboard.writeText(clinic.bookingUrl); }}>Copy link</Button></div>; }

@@ -1,0 +1,2 @@
+import { rupee } from "../utils";
+export function TopServicesTable({ rows }: { rows: { service: string; revenue: number; count: number }[] }) { return <div className="table-wrap"><table className="data-table"><thead><tr><th>Service</th><th>Revenue</th><th>Count</th></tr></thead><tbody>{rows.map((r) => <tr key={r.service}><td className="font-semibold">{r.service}</td><td>{rupee(r.revenue)}</td><td>{r.count}</td></tr>)}</tbody></table></div>; }

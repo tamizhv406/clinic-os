@@ -1,0 +1,18 @@
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Supabase CLI link state: contains the project ref and pooler host.
+**/.temp/
+supabase/.temp/
+supabase/supabase/
+frontend/supabase/.temp/
+*.tsbuildinfo
+.env
+.env.local
+frontend/.env
+frontend/.env.local
+node_modules/
+dist/
+.vercel/
