@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabaseClient";
+import { localDateISO } from "../../utils/formatDate";
 import type { ReportRecord } from "../../shared/types/domain";
 import type { Tables } from "../../shared/types/database.types";
 import type { DoctorPerformanceReport, RevenueReport } from "../../modules/billing/types";
@@ -25,8 +26,8 @@ async function contextFilters(filters?: ReportFilters): Promise<Required<Pick<Re
   return {
     clinicId: filters?.clinicId ?? context.clinic_id ?? undefined,
     branchId: filters?.branchId ?? context.branch_id ?? undefined,
-    dateFrom: filters?.dateFrom ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10),
-    dateTo: filters?.dateTo ?? new Date().toISOString().slice(0, 10),
+    dateFrom: filters?.dateFrom ?? localDateISO(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
+    dateTo: filters?.dateTo ?? localDateISO(),
     doctorId: filters?.doctorId,
     status: filters?.status,
   };
@@ -79,7 +80,7 @@ export const supabaseReportingService: ReportingService = {
 
   async getDashboardSummary(filters) {
     const scoped = await contextFilters(filters);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateISO();
     const [patients, appointmentsToday, consultations, prescriptions, pharmacyOrders, lowStock, invoices, payments] = await Promise.all([
       selectRows<Tables<"patients">>("patients", { ...scoped, dateFrom: undefined, dateTo: undefined }),
       selectRows<Tables<"appointments">>("appointments", { ...scoped, dateFrom: today, dateTo: today }, "appointment_date"),
@@ -279,7 +280,7 @@ export const supabaseReportingService: ReportingService = {
       selectRows<Tables<"appointments">>("appointments", { ...scoped, dateFrom: undefined, dateTo: undefined }, "appointment_date"),
       selectRows<Tables<"medicine_reminders">>("medicine_reminders", { ...scoped, dateFrom: undefined, dateTo: undefined }),
     ]);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateISO();
     const withFollowUp = consultations.filter((item) => item.follow_up_date);
     // A follow-up counts as done once the patient completed a later appointment.
     const isCompleted = (row: Tables<"consultations">) =>

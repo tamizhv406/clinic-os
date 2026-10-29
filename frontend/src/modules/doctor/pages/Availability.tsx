@@ -97,8 +97,13 @@ export default function Availability() {
           is_active: true,
         },
       ] : otherDays;
-      await services.doctor.updateDoctorAvailability(profile.id, nextRows);
+      const result = await services.doctor.updateDoctorAvailability(profile.id, nextRows);
       toast.success(`${dayNames[dayIndex]} availability saved.`);
+      if (result?.warnings && result.warnings.length > 0) {
+        result.warnings.forEach((warn: string) => {
+          toast.warning(warn, { duration: 8000 });
+        });
+      }
       await loadAvailability();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to save availability.");
@@ -111,13 +116,18 @@ export default function Availability() {
     if (!profile) return;
     setLoading(true);
     try {
-      await services.doctor.blockDoctorDate({
+      const result = await services.doctor.blockDoctorDate({
         clinic_id: profile.clinic_id,
         doctor_id: profile.id,
         blocked_date: input.date,
         reason: input.emergencyLeave ? `${input.reason || "Emergency leave"} (emergency)` : input.reason,
       });
       toast.success("Date blocked.");
+      if (result?.warnings && result.warnings.length > 0) {
+        result.warnings.forEach((warn: string) => {
+          toast.warning(warn, { duration: 8000 });
+        });
+      }
       setOpen(false);
       await loadAvailability();
     } catch (error) {

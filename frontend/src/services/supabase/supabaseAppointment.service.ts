@@ -1,9 +1,10 @@
 import { supabase } from "../../lib/supabaseClient";
-import type { AppointmentRecord, AppointmentStatus } from "../../shared/types/domain";
+import type { AppointmentRecord, AppointmentStatus, PatientRecord } from "../../shared/types/domain";
 import type { Json, Tables, TablesInsert } from "../../shared/types/database.types";
-import type { AppointmentFilters, AppointmentService, CreateAppointmentInput } from "../interfaces";
+import type { AppointmentFilters, AppointmentService, CreateAppointmentInput, DoctorScheduleResult } from "../interfaces";
 import { logAuditEvent } from "./auditLogger";
 import { supabaseAuthService } from "./supabaseAuth.service";
+import { localDateISO } from "../../utils/formatDate";
 
 type AppointmentRow = Tables<"appointments">;
 
@@ -21,7 +22,7 @@ function mapAppointment(row: AppointmentRow): AppointmentRecord {
     reason: row.main_problem ?? "",
     source: (row.source ?? "reception") as AppointmentRecord["source"],
     status: normalizeStatus(row.status),
-    paymentStatus: "pending",
+    paymentStatus: ((row.metadata && typeof row.metadata === "object" && (row.metadata as Record<string, unknown>).payment_status) as AppointmentRecord["paymentStatus"]) ?? "pending",
   };
 }
 
@@ -30,8 +31,9 @@ function normalizeStatus(status: string | null): AppointmentStatus {
   return (status ?? "booked") as AppointmentStatus;
 }
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+function splitText(value: string | null | undefined): string[] {
+  if (!value) return [];
+  return value.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
 export const supabaseAppointmentService: AppointmentService = {
@@ -55,11 +57,54 @@ export const supabaseAppointmentService: AppointmentService = {
   },
 
   getTodayAppointments() {
-    return this.getAppointments({} as AppointmentFilters).then((items) => items.filter((item) => item.date === todayIso()));
+    const today = localDateISO();
+    return this.getAppointments({} as AppointmentFilters).then((items) => items.filter((item) => item.date === today));
   },
 
   getDoctorAppointments(doctorId) {
     return this.getAppointments({ doctorId });
+  },
+
+  async getDoctorSchedule(doctorId, options): Promise<DoctorScheduleResult> {
+    const { data, error } = await supabase
+      .from("appointments")
+      .select("*, patients(*)")
+      .eq("doctor_id", doctorId)
+      .gte("appointment_date", options.startDate)
+      .lte("appointment_date", options.endDate)
+      .order("appointment_date", { ascending: true })
+      .order("appointment_time", { ascending: true });
+
+    if (error) throw error;
+
+    const patientMap = new Map<string, PatientRecord>();
+    const appointments: AppointmentRecord[] = [];
+
+    for (const row of (data ?? [])) {
+      appointments.push(mapAppointment(row));
+      if (row.patients) {
+        const p = row.patients as Tables<"patients">;
+        patientMap.set(p.id, {
+          id: p.id,
+          patientId: p.patient_code ?? p.id,
+          clinicId: p.clinic_id,
+          branchId: p.branch_id ?? "",
+          fullName: p.full_name,
+          phone: p.phone,
+          whatsappNumber: p.whatsapp_number ?? p.phone,
+          age: p.age ?? 0,
+          gender: (p.gender as "female" | "male" | "other") ?? "other",
+          source: (p.source ?? "reception") as PatientRecord["source"],
+          allergies: splitText(p.allergies),
+          medicalHistory: splitText(p.medical_history),
+          currentMedications: splitText(p.current_medications),
+          whatsappConsent: p.whatsapp_consent ?? false,
+          reminderConsent: p.reminder_consent ?? false,
+        });
+      }
+    }
+
+    return { appointments, patients: patientMap };
   },
 
   getQueue() {

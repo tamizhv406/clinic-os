@@ -4,9 +4,10 @@ import { toast } from "sonner";
 import { Activity, AlertTriangle, ShieldAlert, Stethoscope } from "lucide-react";
 import { Button, Card, Input, PageHeader, Select, StatsCard } from "../../components/ui";
 import { services } from "../../services/serviceProvider";
+import { localDateISO } from "../../utils/formatDate";
 import type { MonitoringLog, SystemHealthLog } from "../../services/interfaces";
 
-const today = new Date().toISOString().slice(0, 10);
+const today = localDateISO();
 
 function tone(value?: string | null): "danger" | "warning" | "success" {
   if (["failed", "error", "critical", "down", "open"].includes(value ?? "")) return "danger";

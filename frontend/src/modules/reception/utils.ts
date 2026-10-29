@@ -1,14 +1,7 @@
 import type { AppointmentSource, AppointmentStatus, PaymentMode, PaymentStatus } from "./types";
+import { shortStatusLabels } from "../../shared/utils/appointmentStatus";
 
-export const appointmentStatusLabel: Record<AppointmentStatus, string> = {
-  booked: "Booked",
-  arrived: "Arrived",
-  waiting: "Waiting",
-  in_consultation: "In consultation",
-  completed: "Completed",
-  cancelled: "Cancelled",
-  no_show: "No-show"
-};
+export const appointmentStatusLabel: Record<AppointmentStatus, string> = shortStatusLabels;
 
 export const sourceLabel: Record<AppointmentSource, string> = {
   walk_in: "Walk-in",

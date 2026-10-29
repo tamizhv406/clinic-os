@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Button, Input, Modal } from "../../../components/ui";
+import { localDateISO } from "../../../utils/formatDate";
 
 export function BlockedDateModal({ open, onClose, onSave, loading }: { open: boolean; onClose: () => void; onSave?: (input: { date: string; reason: string; emergencyLeave: boolean }) => void; loading?: boolean }) {
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(localDateISO());
   const [reason, setReason] = useState("");
   const [emergencyLeave, setEmergencyLeave] = useState(false);
 

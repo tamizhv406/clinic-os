@@ -20,7 +20,7 @@ export function BookingSummary({ clinic, doctor, service, date, slot, patient, p
       <Row label="Date" value={date?.label ?? "Not selected"} />
       <Row label="Time" value={slot?.label ?? "Not selected"} />
       <Row label="Patient" value={patient.fullName || "Patient name"} />
-      <Row label="Consultation fee" value={fee > 0 ? rupee(fee) : "Confirmed at the clinic"} />
+      <Row label="Consultation fee" value={fee > 0 ? rupee(fee) : "Pay at the clinic"} />
       <Row label="Payment" value={paymentLabel[paymentOption]} />
     </div>
   </div>;

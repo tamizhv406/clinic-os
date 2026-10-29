@@ -1,9 +1,9 @@
 export type { AuthService, StaffAuthContext } from "./auth.service";
 export type { ClinicService } from "./clinic.service";
 export type { UserService, CreateStaffLoginInput } from "./user.service";
-export type { AppointmentService, AppointmentFilters, CreateAppointmentInput } from "./appointment.service";
+export type { AppointmentService, AppointmentFilters, CreateAppointmentInput, DoctorScheduleResult } from "./appointment.service";
 export type { PatientService, PatientFilters } from "./patient.service";
-export type { DoctorDomainService, ConsultationFilters, CreatePrescriptionWithItemsInput, PrescriptionFilters, PrescriptionWithItemsResult } from "./doctor.service";
+export type { DoctorDomainService, AvailabilityUpdateResult, BlockedDateResult, ConsultationFilters, CreatePrescriptionWithItemsInput, PrescriptionFilters, PrescriptionWithItemsResult } from "./doctor.service";
 export type { CounterSaleInput, CounterSaleResult, DispenseOrderInput, MedicineAvailability, MedicineFilters, PharmacyDomainService, PharmacyOrderChange, PharmacyQueueItem, PharmacyQueueOptions } from "./pharmacy.service";
 export type { BillingDomainService, CreateInvoiceInput, InvoiceFilters, InvoiceWithItems } from "./billing.service";
 export type { WhatsAppConsentStatus, WhatsAppDeliveryStatus, WhatsAppMessageInput, WhatsAppSendPlaceholderInput, WhatsAppService } from "./whatsapp.service";

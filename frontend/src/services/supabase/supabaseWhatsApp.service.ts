@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabaseClient";
+import { localDateISO } from "../../utils/formatDate";
 import type { Json, Tables } from "../../shared/types/database.types";
 import type { ClinicDepartment, WhatsAppBookingSettings, WhatsAppConversation, WhatsAppConversationStatus, WhatsAppDoctor, WhatsAppMessage, WhatsAppMessageSender, WhatsAppTemplate, WhatsAppTemplateCategory, WhatsAppTemplateStatus } from "../../modules/whatsapp-booking/types";
 import type { WhatsAppConsentStatus, WhatsAppMessageInput, WhatsAppSendPlaceholderInput, WhatsAppService } from "../interfaces";
@@ -451,7 +452,7 @@ export const supabaseWhatsAppService: WhatsAppService = {
           .select("slot_date,start_time")
           .eq("doctor_id", row.id)
           .eq("status", "available")
-          .gte("slot_date", new Date().toISOString().slice(0, 10))
+          .gte("slot_date", localDateISO())
           .order("slot_date", { ascending: true })
           .order("start_time", { ascending: true })
           .limit(1)

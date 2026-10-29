@@ -1,4 +1,4 @@
-export type DoctorQueueStatus = "waiting" | "in_consultation" | "completed" | "no_show";
+export type DoctorQueueStatus = "booked" | "arrived" | "waiting" | "in_consultation" | "completed" | "cancelled" | "no_show";
 export type FollowUpStatus = "due_today" | "upcoming" | "overdue" | "completed";
 export type PatientTag = "New Patient" | "Follow-up" | "Regular" | "Senior Citizen" | "Child" | "VIP";
 export type DiagnosisType = "provisional" | "final";
@@ -7,8 +7,45 @@ export type ReminderStatus = "active" | "paused" | "completed" | "cancelled";
 export type ReminderFrequency = "once_daily" | "twice_daily" | "three_times_daily" | "four_times_daily" | "custom";
 export type PatientResponseStatus = "confirmed" | "wants_reschedule" | "no_response" | "cancelled";
 
-export type DoctorStats = { waitingPatients: number; inConsultation: number; completedToday: number; followUpsDue: number; averageWaitingTime: number; prescriptionsSent: number };
-export type DoctorQueueItem = { id: string; token: string; appointmentId?: string; tokenNumber?: string; patientId: string; patientName: string; phone?: string; whatsappNumber?: string; age: number; gender: "female" | "male" | "other"; department?: string; doctorId?: string; doctorName?: string; appointmentDate?: string; appointmentTime?: string; mainProblem?: string; reason: string; source: string; waitingMinutes: number; previousVisit: boolean; isNewPatient?: boolean; reminderStatus?: string; tags: PatientTag[]; status: DoctorQueueStatus };
+export type DoctorStats = {
+  todayTotal: number;
+  checkedIn: number;
+  waitingPatients: number;
+  inConsultation: number;
+  completedToday: number;
+  upcomingThisWeek: number;
+  followUpsDue?: number;
+  averageWaitingTime?: number;
+  prescriptionsSent?: number;
+};
+
+export type DoctorQueueItem = {
+  id: string;
+  token: string;
+  appointmentId?: string;
+  tokenNumber?: string;
+  patientId: string;
+  patientName: string;
+  phone?: string;
+  whatsappNumber?: string;
+  age: number;
+  gender: "female" | "male" | "other";
+  department?: string;
+  doctorId?: string;
+  doctorName?: string;
+  appointmentDate?: string;
+  appointmentTime?: string;
+  mainProblem?: string;
+  reason: string;
+  source: string;
+  waitingMinutes: number;
+  previousVisit: boolean;
+  isNewPatient?: boolean;
+  reminderStatus?: string;
+  tags: PatientTag[];
+  status: DoctorQueueStatus;
+};
+
 export type PatientProfile = { id: string; name: string; phone: string; age: number; gender: string; bloodGroup: string; tags: PatientTag[]; lastVisit: string; allergies: string[]; conditions: string[]; medications: string[]; emergencyContact: string; totalVisits: number; pendingPayment: boolean; internalNotes: string };
 export type PatientTimelineItem = { id: string; date: string; doctor: string; diagnosis: string; prescriptionSummary: string; followUpStatus: string; paymentStatus: string };
 export type Vitals = { temperature?: string; bp?: string; pulse?: string; weight?: string; height?: string; spo2?: string; sugar?: string };

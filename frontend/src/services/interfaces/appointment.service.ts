@@ -1,13 +1,23 @@
-import type { AppointmentRecord, AppointmentStatus } from "../../shared/types/domain";
+import type { AppointmentRecord, AppointmentStatus, PatientRecord } from "../../shared/types/domain";
 import type { Tables, TablesInsert } from "../../shared/types/database.types";
 
 export type AppointmentFilters = Partial<Pick<AppointmentRecord, "clinicId" | "branchId" | "doctorId" | "patientId" | "status" | "source">>;
 export type CreateAppointmentInput = Omit<AppointmentRecord, "id" | "tokenNumber"> & { tokenNumber?: string };
+
+export interface DoctorScheduleResult {
+  appointments: AppointmentRecord[];
+  patients: Map<string, PatientRecord>;
+}
+
 export interface AppointmentService {
   getAppointments(filters?: AppointmentFilters): Promise<AppointmentRecord[]>;
   getAppointmentById(id: string): Promise<AppointmentRecord>;
   getTodayAppointments(): Promise<AppointmentRecord[]>;
   getDoctorAppointments(doctorId: string): Promise<AppointmentRecord[]>;
+  getDoctorSchedule(
+    doctorId: string,
+    options: { startDate: string; endDate: string; search?: string }
+  ): Promise<DoctorScheduleResult>;
   getQueue(): Promise<AppointmentRecord[]>;
   createAppointment(input: CreateAppointmentInput): Promise<AppointmentRecord>;
   bookAppointmentWithSlot(input: Record<string, unknown>): Promise<AppointmentRecord>;

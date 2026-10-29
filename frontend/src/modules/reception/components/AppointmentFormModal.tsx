@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Button, Input, Modal, Select, Textarea } from "../../../components/ui";
 import { services } from "../../../services/serviceProvider";
 import type { PatientRecord } from "../../../shared/types/domain";
+import { localDateISO } from "../../../utils/formatDate";
 import type { Tables } from "../../../shared/types/database.types";
 
 type DoctorOption = Tables<"doctor_profiles"> & { label: string };
@@ -13,7 +14,7 @@ type Props = {
   onCreated?: () => void;
 };
 
-const today = new Date().toISOString().slice(0, 10);
+const today = localDateISO();
 
 export function AppointmentFormModal({ open, onClose, onCreated }: Props) {
   const [patients, setPatients] = useState<PatientRecord[]>([]);

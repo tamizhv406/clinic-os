@@ -8,6 +8,7 @@ import ProtectedRoute from "./ProtectedRoute";
 import type { ModuleKey, PermissionKey } from "../shared/types/domain";
 import type { UserRole } from "../types/user";
 
+const LandingPage = lazy(() => import("../pages/public/LandingPage"));
 const Login = lazy(() => import("../pages/auth/Login"));
 const OwnerDashboard = lazy(() => import("../pages/owner/OwnerDashboard"));
 const OwnerStaff = lazy(() => import("../pages/owner/OwnerStaff"));
@@ -62,7 +63,7 @@ export default function AppRoutes() {
   return (
     <Suspense fallback={loading}>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/book" element={<ClinicDirectory />} />
         <Route path="/book/:clinicSlug" element={<ClinicBookingPage />} />

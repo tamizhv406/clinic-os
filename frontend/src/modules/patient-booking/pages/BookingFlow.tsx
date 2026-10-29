@@ -119,9 +119,9 @@ export default function BookingFlow() {
         paymentOption: payment,
         source: "website",
       });
-      navigate(`/book/${clinic.slug}/success`, { state: result });
+      navigate(`/book/${clinic.slug}/success`, { state: { ...result, phone: patient.phone } });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unable to confirm this appointment.");
+      toast.error(err instanceof Error ? err.message : "Unable to complete this booking.");
       // The slot may have been taken while the patient was filling the form.
       if (doctorId && dateId) setSlots(await services.booking.getAvailableSlots(doctorId, dateId).catch(() => slots));
     } finally {
@@ -136,7 +136,7 @@ export default function BookingFlow() {
 
   return <main className="min-h-screen bg-slate-50 px-4 py-5"><div className="mx-auto max-w-5xl space-y-6">
     <div className="flex items-center justify-between">
-      <Link className="text-sm font-semibold text-slate-500" to={`/book/${clinic.slug}`}>â† Back to clinic</Link>
+      <Link className="text-sm font-semibold text-slate-500" to={`/book/${clinic.slug}`}>← Back to clinic</Link>
       <Link className="text-sm font-semibold text-brand-700" to="/booking/status">Check booking status</Link>
     </div>
     <Card className="p-4 md:p-5"><BookingStepper current={step} /></Card>

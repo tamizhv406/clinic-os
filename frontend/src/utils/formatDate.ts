@@ -31,3 +31,17 @@ export function daysBetweenISO(from: string, to: string) {
 export function istDayStartISO(isoDate: string) {
   return `${isoDate}T00:00:00+05:30`;
 }
+
+/**
+ * Formats 24h time ("09:00:00" or "14:30") into consistent 12-hour AM/PM format ("09:00 AM", "02:30 PM").
+ */
+export function formatTime12(time: string | null | undefined): string {
+  if (!time) return "";
+  const match = String(time).match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return String(time);
+  const hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const displayHours = hours % 12 || 12;
+  return `${String(displayHours).padStart(2, "0")}:${minutes} ${ampm}`;
+}

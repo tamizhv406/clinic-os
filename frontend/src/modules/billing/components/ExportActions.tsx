@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import { Button } from "../../../components/ui";
+import { localDateISO } from "../../../utils/formatDate";
 
 export type ExportRow = Record<string, string | number>;
 
@@ -29,7 +30,7 @@ export function ExportActions({ rows = [], filename = "vernex-report" }: { rows?
       toast.error("There is nothing to export for the current filters.");
       return;
     }
-    download(`${filename}-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(rows), "text/csv;charset=utf-8");
+    download(`${filename}-${localDateISO()}.csv`, toCsv(rows), "text/csv;charset=utf-8");
     toast.success("Report exported as CSV.");
   };
 

@@ -1,13 +1,13 @@
 import { supabase } from "../../lib/supabaseClient";
 import type { ConsultationRecord, DeliveryStatus, DoctorAvailabilityRecord, PrescriptionItemRecord, PrescriptionRecord, ReminderRecord, ReminderStatus } from "../../shared/types/domain";
 import type { Json, Tables, TablesInsert, TablesUpdate } from "../../shared/types/database.types";
-import type { ConsultationFilters, CreatePrescriptionWithItemsInput, DoctorDomainService, PrescriptionFilters, PrescriptionWithItemsResult } from "../interfaces";
+import type { AvailabilityUpdateResult, BlockedDateResult, ConsultationFilters, CreatePrescriptionWithItemsInput, DoctorDomainService, PrescriptionFilters, PrescriptionWithItemsResult } from "../interfaces";
 import type { FollowUp, FollowUpStatus, MedicineReminderSchedule, PatientTag, PatientTimelineItem, Prescription } from "../../modules/doctor/types";
 import { logAuditEvent } from "./auditLogger";
 import { supabaseAuthService } from "./supabaseAuth.service";
+import { localDateISO } from "../../utils/formatDate";
 
 type AvailabilityRow = Tables<"doctor_availability">;
-type DoctorProfileRow = Tables<"doctor_profiles">;
 type ConsultationRow = Tables<"consultations">;
 type PrescriptionRow = Tables<"prescriptions">;
 type PrescriptionItemRow = Tables<"prescription_items">;
@@ -114,32 +114,25 @@ function addDays(date: Date, days: number) {
 }
 
 function isoDate(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-
-function dateToWeekday(date: string) {
-  return new Date(`${date}T00:00:00Z`).getUTCDay();
+  return localDateISO(date);
 }
 
 function normalizeDateRange(dateOrRange: string | { from: string; to: string }) {
   return typeof dateOrRange === "string" ? { from: dateOrRange, to: dateOrRange } : dateOrRange;
 }
 
-function timeToMinutes(time: string) {
-  const [hours, minutes] = time.split(":").map(Number);
-  return hours * 60 + minutes;
+interface ScheduleSyncWarning {
+  appointmentId?: string;
+  token?: string;
+  patientName?: string;
+  date?: string;
+  time?: string;
+  warning: string;
 }
 
-function minutesToTime(value: number) {
-  const hours = String(Math.floor(value / 60)).padStart(2, "0");
-  const minutes = String(value % 60).padStart(2, "0");
-  return `${hours}:${minutes}:00`;
-}
-
-async function getProfile(doctorId: string): Promise<DoctorProfileRow> {
-  const { data, error } = await supabase.from("doctor_profiles").select("*").eq("id", doctorId).single();
-  if (error) throw error;
-  return data;
+interface ScheduleSyncResponse {
+  success?: boolean;
+  warnings?: ScheduleSyncWarning[];
 }
 
 async function updateAppointmentStatus(appointmentId: string, status: string, reason: string) {
@@ -170,13 +163,34 @@ export const supabaseDoctorDomainService: DoctorDomainService = {
     return (data ?? []).map(mapAvailability);
   },
 
-  async updateDoctorAvailability(doctorId, input) {
-    const { error: deleteError } = await supabase.from("doctor_availability").delete().eq("doctor_id", doctorId);
-    if (deleteError) throw deleteError;
-    if (input.length === 0) return [];
-    const { data, error } = await supabase.from("doctor_availability").insert(input).select("*");
+  async updateDoctorAvailability(doctorId, input): Promise<AvailabilityUpdateResult> {
+    const { data: syncData, error: syncError } = await supabase.rpc(
+      "sync_doctor_schedule_and_slots" as never,
+      {
+        p_doctor_id: doctorId,
+        p_availability: input,
+      } as never
+    );
+
+    if (syncError) {
+      const { error: deleteError } = await supabase.from("doctor_availability").delete().eq("doctor_id", doctorId);
+      if (deleteError) throw deleteError;
+      if (input.length === 0) {
+        const emptyArr: Tables<"doctor_availability">[] = [];
+        return Object.assign(emptyArr, { warnings: [] as string[] });
+      }
+      const { data, error } = await supabase.from("doctor_availability").insert(input).select("*");
+      if (error) throw error;
+      const rows = data ?? [];
+      return Object.assign(rows, { warnings: [] as string[] });
+    }
+
+    const { data, error } = await supabase.from("doctor_availability").select("*").eq("doctor_id", doctorId);
     if (error) throw error;
-    return data ?? [];
+    const syncResult = syncData as ScheduleSyncResponse | null;
+    const warnings: string[] = (syncResult?.warnings ?? []).map((w) => w.warning);
+    const res = (data ?? []).slice();
+    return Object.assign(res, { warnings });
   },
 
   async getDoctorBlockedDates(doctorId) {
@@ -185,21 +199,38 @@ export const supabaseDoctorDomainService: DoctorDomainService = {
     return data ?? [];
   },
 
-  async blockDoctorDate(input) {
+  async blockDoctorDate(input): Promise<BlockedDateResult> {
     const context = await supabaseAuthService.getCurrentAuthContext();
-    const { data, error } = await supabase.from("doctor_blocked_dates").insert({ ...input, created_by: input.created_by ?? context.staffProfileId }).select("*").single();
-    if (error) throw error;
-    await supabase.from("appointment_slots").update({ status: "blocked" }).eq("doctor_id", input.doctor_id).eq("slot_date", input.blocked_date);
-    return data;
+    const staffId = input.created_by ?? context.staffProfileId;
+
+    const { data: syncData, error: syncError } = await supabase.rpc(
+      "block_doctor_date_and_sync_slots" as never,
+      {
+        p_clinic_id: input.clinic_id,
+        p_doctor_id: input.doctor_id,
+        p_blocked_date: input.blocked_date,
+        p_reason: input.reason ?? null,
+        p_staff_id: staffId,
+      } as never
+    );
+
+    if (syncError) {
+      const { data, error } = await supabase.from("doctor_blocked_dates").insert({ ...input, created_by: staffId }).select("*").single();
+      if (error) throw error;
+      await supabase.from("appointment_slots").update({ status: "blocked" }).eq("doctor_id", input.doctor_id).eq("slot_date", input.blocked_date);
+      return Object.assign(data, { warnings: [] as string[] });
+    }
+
+    const { data, error: selectError } = await supabase.from("doctor_blocked_dates").select("*").eq("doctor_id", input.doctor_id).eq("blocked_date", input.blocked_date).single();
+    if (selectError) throw selectError;
+    const syncResult = syncData as ScheduleSyncResponse | null;
+    const warnings: string[] = (syncResult?.warnings ?? []).map((w) => w.warning);
+    return Object.assign(data, { warnings });
   },
 
   async getAvailableSlots(doctorId, date) {
-    const { data: existingSlots, error: existingError } = await supabase.from("appointment_slots").select("*").eq("doctor_id", doctorId).eq("slot_date", date).order("start_time", { ascending: true });
-    if (existingError) throw existingError;
-
-    if ((existingSlots ?? []).length === 0) {
-      await this.generateSlotsForDoctor(doctorId, date);
-    }
+    // Single source of truth: delegate slot generation to database function
+    await supabase.rpc("ensure_doctor_slots" as never, { p_doctor_id: doctorId, p_date: date } as never);
 
     const { data, error } = await supabase.from("appointment_slots").select("*").eq("doctor_id", doctorId).eq("slot_date", date).eq("status", "available").order("start_time", { ascending: true });
     if (error) throw error;
@@ -208,50 +239,12 @@ export const supabaseDoctorDomainService: DoctorDomainService = {
 
   async generateSlotsForDoctor(doctorId, dateOrRange) {
     const dateRange = normalizeDateRange(dateOrRange);
-    const profile = await getProfile(doctorId);
-    const [{ data: availability, error }, { data: blockedDates, error: blockedError }] = await Promise.all([
-      supabase.from("doctor_availability").select("*").eq("doctor_id", doctorId).eq("is_active", true),
-      supabase.from("doctor_blocked_dates").select("blocked_date").eq("doctor_id", doctorId),
-    ]);
-    if (error) throw error;
-    if (blockedError) throw blockedError;
-    const blocked = new Set((blockedDates ?? []).map((item) => item.blocked_date));
-    const rows: TablesInsert<"appointment_slots">[] = [];
     const start = new Date(`${dateRange.from}T00:00:00`);
     const end = new Date(`${dateRange.to}T00:00:00`);
     for (let day = start; day <= end; day = addDays(day, 1)) {
       const slotDate = isoDate(day);
-      if (blocked.has(slotDate)) continue;
-      const weekday = dateToWeekday(slotDate);
-      for (const item of availability ?? []) {
-        if (item.day_of_week !== weekday) continue;
-        const slotDuration = profile.slot_duration_minutes ?? 15;
-        let cursor = timeToMinutes(item.start_time);
-        const finish = timeToMinutes(item.end_time);
-        const breakStart = item.break_start ? timeToMinutes(item.break_start) : null;
-        const breakEnd = item.break_end ? timeToMinutes(item.break_end) : null;
-        while (cursor + slotDuration <= finish) {
-          const inBreak = breakStart !== null && breakEnd !== null && cursor >= breakStart && cursor < breakEnd;
-          if (!inBreak) {
-            rows.push({
-              clinic_id: profile.clinic_id,
-              branch_id: item.branch_id ?? profile.branch_id,
-              doctor_id: doctorId,
-              slot_date: slotDate,
-              start_time: minutesToTime(cursor),
-              end_time: minutesToTime(cursor + slotDuration),
-              capacity: profile.max_appointments_per_slot ?? 1,
-              booked_count: 0,
-              status: "available",
-            });
-          }
-          cursor += slotDuration;
-        }
-      }
+      await supabase.rpc("ensure_doctor_slots" as never, { p_doctor_id: doctorId, p_date: slotDate } as never);
     }
-    if (rows.length === 0) return [];
-    const { error: insertError } = await supabase.from("appointment_slots").upsert(rows, { onConflict: "doctor_id,slot_date,start_time", ignoreDuplicates: true });
-    if (insertError) throw insertError;
     const { data, error: selectError } = await supabase.from("appointment_slots").select("*").eq("doctor_id", doctorId).gte("slot_date", dateRange.from).lte("slot_date", dateRange.to).order("slot_date", { ascending: true }).order("start_time", { ascending: true });
     if (selectError) throw selectError;
     return data ?? [];

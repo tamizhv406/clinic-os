@@ -82,7 +82,7 @@ export default function WhatsAppBookingSimulator() {
   }, [availability, date]);
 
   const selectedDoctor = doctors.find((doctor) => doctor.id === doctorId);
-  const slotsForDate = availability.dates.find((item) => item.date === date)?.slots ?? [];
+  const slotsForDate = useMemo(() => availability.dates.find((item) => item.date === date)?.slots ?? [], [availability.dates, date]);
   const patientSummary = [patient.fullName, patient.age && `${patient.age} yrs`, patient.gender, patient.phone].filter(Boolean).join(", ") || "Not collected yet";
 
   // The transcript mirrors exactly what the patient has chosen so far.
@@ -110,7 +110,7 @@ export default function WhatsAppBookingSimulator() {
       rows.push(["bot", "What is the main health problem?"]);
       rows.push(["patient", patient.mainProblem]);
     }
-    if (confirmed) rows.push(["bot", `Your appointment is confirmed. Token ${confirmed.tokenNumber} with ${confirmed.doctorName} on ${confirmed.appointmentDate} at ${confirmed.appointmentTime}.`]);
+    if (confirmed) rows.push(["bot", `Your appointment is booked. Token ${confirmed.tokenNumber} with ${confirmed.doctorName} on ${confirmed.appointmentDate} at ${confirmed.appointmentTime}.`]);
     return rows.map(([sender, text], index) => ({ id: `m${index}`, sender, text, time: "" }));
   }, [availability.dates, clinicName, confirmed, date, department, departments, patient, patientSummary, selectedDoctor, slot, slotsForDate, visibleDoctors]);
 
@@ -165,7 +165,7 @@ export default function WhatsAppBookingSimulator() {
         source: "whatsapp",
         currentStep: "confirmed",
         linkedAppointmentId: appointment.id,
-        lastMessage: `Appointment confirmed. Token ${appointment.tokenNumber}.`,
+        lastMessage: `Appointment booked. Token ${appointment.tokenNumber}.`,
         metadata: { patientName: record.fullName, appointmentToken: appointment.tokenNumber },
       }).catch(() => null);
 
@@ -213,7 +213,7 @@ export default function WhatsAppBookingSimulator() {
   if (loading) return <main className="p-5 md:p-7"><PageHeader title="WhatsApp Booking" description="Loading clinic data..." /></main>;
 
   return <div className="space-y-6">
-    <PageHeader title="WhatsApp Booking Console" description="Walk a patient through the WhatsApp booking flow. Confirming creates a real appointment with source “whatsapp”." action={<Button variant="secondary" onClick={reset}>Restart</Button>} />
+    <PageHeader title="WhatsApp Booking Console" description="Walk a patient through the WhatsApp booking flow. Booking reserves a real slot with source “whatsapp”." action={<Button variant="secondary" onClick={reset}>Restart</Button>} />
     <div className="grid gap-4 xl:grid-cols-[.8fr_1.2fr]">
       <div className="space-y-6">
         <DepartmentSelector departments={departments} selected={department} onSelect={(next) => { setDepartment(next); setDoctorId(""); }} />
@@ -240,7 +240,7 @@ export default function WhatsAppBookingSimulator() {
               Patient consents to WhatsApp reminders
             </label>
           </div>
-          <Button className="mt-4" loading={booking} onClick={() => void confirm()}>Confirm appointment</Button>
+          <Button className="mt-4" loading={booking} onClick={() => void confirm()}>Confirm booking</Button>
         </Card>
         <div className="grid gap-4 lg:grid-cols-2">
           <PatientDetailsCollector details={patientSummary} />

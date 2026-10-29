@@ -1,7 +1,7 @@
 # Vernex Clinic OS
 
 A role-based clinic management system for Indian clinics: appointments, consultations,
-prescriptions, pharmacy, billing, reports and WhatsApp-first patient booking.
+prescriptions, pharmacy, billing, reports and public/WhatsApp-first patient booking.
 
 Every screen reads and writes **live Supabase data**. There is no mock layer — the
 service registry in `frontend/src/services/serviceProvider.ts` points at Supabase
@@ -18,7 +18,8 @@ staff member's clinic.
 | Routing | React Router 7 with lazy routes and module guards |
 | Charts | Recharts |
 | Forms | React Hook Form + Zod |
-| Backend | Supabase (PostgreSQL, Auth, RLS, RPC) |
+| Backend | Supabase (PostgreSQL, Auth, RLS, RPCs) |
+| Timezone | Asia/Kolkata (IST, UTC+05:30) |
 
 ---
 
@@ -32,10 +33,14 @@ frontend/src/
     serviceProvider.ts single registry every screen imports
   modules/             feature modules: reception, doctor, pharmacy,
                        billing, whatsapp-booking, patient-booking
+  pages/
+    public/            visitor landing page (/)
+    auth/              staff login (/login)
   access-control/      role, module and permission guards
   shared/types/        domain types + generated database.types.ts
+  utils/               formatDate.ts (IST date/time helpers)
 supabase/
-  migrations/          schema, RLS policies and RPCs (phases 1-15)
+  migrations/          schema, RLS policies and RPCs (phases 1-16 + booking & doctor flow)
   seed/demo_seed.sql   demo data, safe to re-run
 ```
 
@@ -43,8 +48,9 @@ supabase/
 (`ModuleGuard`, `PermissionGuard`), and PostgreSQL RLS independently rejects
 anything the UI might have let through. The database is the authority.
 
-**Patients never log in.** They reach the clinic through WhatsApp or the public
-booking link. Patient records are clinical data owned by staff.
+**Public booking is the front door.** Visitors landing on `/` see the public landing
+page with immediate options to book an appointment or look up existing appointments.
+Staff members with an active session are routed directly to their role-based home.
 
 ---
 
@@ -79,7 +85,13 @@ supabase db push
 or by pasting each file into the SQL editor. All migrations are idempotent and
 safe to re-run.
 
-### 3. Demo data (optional)
+Key migrations added for Booking Flow and Doctor Schedule:
+1. `20261028181000_honest_booking_status.sql` — Real status reporting (`booked`, `arrived`, etc.), phone normalisation, and removed misleading confirmation claims.
+2. `20261028182000_schedule_and_slot_correctness.sql` — Single-source slot generation in `ensure_doctor_slots`, atomic schedule updates, 12-hour AM/PM formatting, past slot filtering, and slot concurrency guards.
+3. `20261028183000_concurrency_safe_tokens.sql` — Transactional advisory locks for tokens, unique constraint per clinic and date, and A001..Z999 rollover.
+4. `20261028184000_my_appointments_lookup.sql` — Anonymous lookup RPC by clinic and mobile number, server-side rolling rate limiting, and patient name masking.
+
+### 3. Demo Data (Optional)
 
 Create these users under **Authentication → Users** with *Auto Confirm User*
 ticked, all sharing one password:
@@ -90,39 +102,7 @@ doctor@vernex.test       doctor2@vernex.test      doctor3@vernex.test
 super_admin@vernex.test
 ```
 
-Then run `supabase/seed/demo_seed.sql` (SQL editor, or `psql`). It needs
-**every** migration from step 2 applied first, including the Phase 16 pharmacy
-migrations (`20261013120000_…` to `20261013123000_…`); it stops with a clear
-message if they are missing. It identifies the demo clinic by its slug
-(`vernex-demo-clinic`), adopts an existing one if present, re-dates itself around
-today and skips any user you chose not to create. Re-running refreshes the data
-rather than duplicating it, and resets the demo clinic's pharmacy (stock,
-purchases, movements, pharmacy bills) so the demo below can be repeated. It never
-touches another clinic.
-
-The pharmacy demo data: 40 medicines, ~70 batches (6 low stock, 3 out of stock,
-5 expiring within 30 days, 3 more within 90 days, 3 expired), 8 supplier
-purchases over 60 days, ~20 dispensed prescriptions over the last two weeks,
-~25 counter sales (at least 5 today) and 6 prescriptions waiting in today's
-queue — one with a medicine that is not in the catalogue, one with an
-out-of-stock medicine and one partially dispensed.
-
-#### 5-minute pharmacist demo
-
-1. Sign in as `VNX-PHAR-001`. The dashboard shows 6 pending prescriptions,
-   today's sales and the low-stock and expiry tiles with real numbers.
-2. **Prescription Queue** → open a pending order → see the allergies banner and
-   the earliest-expiry (FEFO) batches → **Dispense and create bill**.
-3. In another browser, sign in as `doctor@vernex.test`, complete a consultation
-   with medicines (keep *Send to pharmacy* ticked) → the pharmacist sees the new
-   prescription appear with a toast, without refreshing.
-4. **Add Stock → Excel / CSV upload** → *Download template*, then upload
-   `docs/sample-data/pharmacy_stock_upload_sample.csv` (enter a supplier and an
-   invoice number first) → preview → import → the stock and low-stock tiles update.
-5. **Add Stock → Manual entry** → receive 100 more of an existing batch (e.g.
-   Paracetamol 650mg, batch `PCM-A29`) → **Medicine Stock** shows the summed
-   quantity and the movement in its history.
-6. **Counter Billing** → quick sale → it appears under *Today's bills*.
+Then run `supabase/seed/demo_seed.sql`.
 
 ### 4. Run
 
@@ -131,13 +111,14 @@ cd frontend
 npm install
 npm run dev     # http://localhost:5173
 npm run build   # production build
+npm run lint    # ESLint check
 ```
 
 ---
 
-## Demo accounts
+## Demo Accounts
 
-Sign in with **either the email or the staff ID** — the login screen resolves a
+Sign in with **either the email or the staff ID** at `/login` — the login screen resolves a
 staff ID to its email through the `resolve_staff_login_email` RPC.
 
 | Login | Staff ID | Role | Lands on |
@@ -151,79 +132,67 @@ staff ID to its email through the `resolve_staff_login_email` RPC.
 | `super_admin@vernex.test` | `VNX-SUPER-002` | Super Admin | `/super-admin/dashboard` |
 
 > Passwords are **not** stored in this repository. You choose them when you
-> create the users. These are disposable test accounts — never reuse them, or
-> the `@vernex.test` addresses, for anything real.
-
-The public patient page needs no login: `/book/vernex-demo-clinic`.
+> create the users.
 
 ---
 
-## Modules
+## Modules & Key Flows
 
-**Reception** — dashboard with live queue and today's appointments; appointment
-search and filters; booking, rescheduling and cancellation with WhatsApp notice;
-walk-in registration; a billing shortcut that records real payments against open
-invoices.
+### Public Landing Page (`/`)
+- Public front door for prospective patients.
+- Large primary action: **Book an appointment** (direct to published clinic or `/book` directory).
+- Secondary action: **My appointments** (direct to phone lookup at `/booking/status`).
+- Quiet **Staff login** link to `/login`.
+- If an authenticated staff member navigates to `/`, they are automatically routed to their role dashboard without flashing the landing page.
 
-**Doctor** — queue with WhatsApp-booking context; consultation capture (symptoms,
-vitals, diagnosis, advice, follow-up); prescription builder with clinic medicine
-autocomplete, saved templates, learned favourites and lab tests; WhatsApp
-delivery and pharmacy routing; follow-up tracking; medicine reminder schedules;
-weekly availability and blocked dates.
+### Honest Booking Status & Flow
+- Established a single shared appointment-status dictionary (`Booked - your slot is reserved`, `Checked in - waiting`, `With the doctor`, `Completed`, `Cancelled`, `Missed`).
+- Removed all misleading claims that a doctor approved or confirmed a booking.
+- Fully auto-booked workflow; reserves slot immediately without artificial doctor approval gates.
+- Booking success page links directly to status and calendar.
 
-**Pharmacy** — prescriptions sent by doctors become pharmacy orders in the
-database immediately and appear live in the queue (realtime plus a 30-second
-poll), with medicine matching, allergies, FEFO batch selection, partial
-dispensing and "mark unavailable"; Add Stock by manual entry or Excel/CSV upload
-with a validated preview, saved atomically (quantities are always added to an
-existing batch, never overwritten); medicine stock per medicine with batches,
-filters, adjustments, batch blocking and movement history; counter billing that
-prices from stock and reduces it in one transaction. See
-[Phase 16](docs/PHASE_16_PHARMACIST_MODULE.md).
+### Doctor Dashboard (`/doctor/queue`)
+- **Today** and **Upcoming** view tabs, fully responsive down to 375 px.
+- Displays all appointments for today (including booked appointments prior to check-in).
+- "Start Consultation" is strictly guarded to checked-in patients only (`arrived`, `waiting`).
+- Real database statistics (today total, checked in, waiting, completed, upcoming this week); zero fixed zeroes.
+- Dynamic greeting based on current India Standard Time hour (`Good morning / afternoon / evening, Dr. [Name]`).
+- Single-query patient loading to avoid N+1 queries.
+- Automatic 30-second live refresh with timestamp.
 
-**Billing** — invoice builder driven by the clinic service catalogue; invoices,
-receipts, pending payments with reminders; refunds with a request → approve →
-process workflow; seven reports with date/doctor/branch filters and CSV export.
+### Doctor Schedule & Slot Engine
+- Single source of truth: PostgreSQL function `ensure_doctor_slots`.
+- Dynamic slot materialization respecting working hours, break windows (never starts in or overlaps a break), slot duration, capacity, blocked dates, and active status.
+- Schedule modification RPC `sync_doctor_schedule_and_slots` removes future unbooked slots, regenerates new slots, preserves booked slots, and alerts the doctor in plain words about conflicting bookings.
+- Timezone alignment: All date evaluations use `Asia/Kolkata` time; past slots for today are omitted from available lists.
+- Displayed uniformly in 12-hour AM/PM format (`hh:mm AM/PM`).
+- Concurrency protection: `SELECT ... FOR UPDATE` ensures exact single-winner slot allocation with a clear message: `"This slot was just taken, please pick another"`.
 
-**WhatsApp booking** — booking console that walks a patient through department →
-doctor → date → slot → details and creates a real appointment with source
-`whatsapp`, persisting the conversation; message templates; conversation
-tracking; clinic-level settings stored on the clinic record.
-
-**Public booking** — `/book/:clinicSlug` runs unauthenticated through
-security-definer RPCs (`public_clinic_doctors`, `public_doctor_available_slots`,
-`public_create_booking`, …). Anonymous visitors can browse doctors, services and
-open slots and book an appointment, but **cannot read patient, appointment or
-billing tables directly** — RLS returns nothing. Booking status lookup requires
-both the phone number and the token.
-
-**Owner / Super Admin** — clinic overview with revenue trend, appointment mix,
-doctor-wise revenue and low-stock alerts; monitoring (audit, errors, security,
-health); clinic, branch, staff and module administration.
+### My Appointments & Privacy (`/booking/status`)
+- Patients select their clinic and enter their mobile number.
+- Displays upcoming appointments (soonest first) followed by past appointments from the last 90 days.
+- Normalizes phone numbers (last 10 digits) across formats (`+91`, `91`, leading `0`, spaces, hyphens).
+- Anonymous access strictly restricted to the curated `public_lookup_appointments` RPC.
+- Patient privacy: Patient names are masked (e.g. `Aisha K.`); clinical data (notes, diagnosis, vitals, prescriptions, billing) is never exposed.
+- Server-side rate limiting prevents brute-force phone probing (5 requests per 5 minutes per phone/clinic).
 
 ---
 
-## Security notes
+## Security Notes
 
-- RLS is enabled on all tables; policies scope reads and writes to
-  `current_clinic_id()` and check per-module permissions.
-- The anonymous booking path never touches a table directly — only
-  `security definer` RPCs that return a curated payload.
-- Slot booking takes a row lock and rejects double-booking.
-- Booking status requires phone **and** reference; a matching token alone
-  returns nothing.
-- WhatsApp sends are recorded in `whatsapp_messages` and
-  `whatsapp_delivery_logs` but **no message leaves the system** until an official
-  WhatsApp Business API provider is connected. Do not use unofficial WhatsApp
-  automation for patient health data.
-- Never commit `frontend/.env`, a service role key, or the Supabase CLI
-  `.temp/` link state.
+- RLS is enabled on all tables; policies scope reads and writes to `current_clinic_id()` and check per-module permissions.
+- The anonymous booking path never touches a table directly — only `security definer` RPCs that return curated payloads.
+- Token numbers use transactional advisory locks and unique database constraints to prevent race-condition collisions.
+- Mobile-number-only lookup is protected by database-enforced rate limiting and patient name masking. OTP via SMS or WhatsApp is recommended once an official provider is integrated.
+- Never commit `frontend/.env`, a service role key, or credentials into Git.
 
 ---
 
-## Documentation
+## Reports & Documentation
 
-Phase-by-phase build notes live in [docs/](docs/), including the
-[frontend/backend contract](docs/FRONTEND_BACKEND_CONTRACT.md), the
-[Supabase integration guide](docs/SUPABASE_REPLACEMENT_GUIDE.md) and the
-[pharmacist module (Phase 16)](docs/PHASE_16_PHARMACIST_MODULE.md).
+- [Booking Workflow End-to-End Test](docs/BOOKING_WORKFLOW_TEST.md)
+- [Schedule and Slot Correctness Audit](docs/SCHEDULE_AUDIT.md)
+- [Final QA Report](docs/FINAL_QA_REPORT.md)
+- [Security Audit Report](docs/SECURITY_AUDIT_REPORT.md)
+- [Frontend/Backend Contract](docs/FRONTEND_BACKEND_CONTRACT.md)
+- [Pharmacist Module (Phase 16)](docs/PHASE_16_PHARMACIST_MODULE.md)

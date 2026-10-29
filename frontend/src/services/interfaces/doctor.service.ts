@@ -27,6 +27,10 @@ export type CreatePrescriptionWithItemsInput = {
   reminderConsentConfirmed?: boolean;
 };
 
+export type AvailabilityUpdateResult = Tables<"doctor_availability">[] & { warnings?: string[] };
+
+export type BlockedDateResult = Tables<"doctor_blocked_dates"> & { warnings?: string[] };
+
 export type PrescriptionWithItemsResult = {
   prescription: Tables<"prescriptions">;
   items: Tables<"prescription_items">[];
@@ -36,9 +40,9 @@ export interface DoctorDomainService {
   getDoctorProfiles(): Promise<Tables<"doctor_profiles">[]>;
   getDoctorProfileByStaffId(staffId: string): Promise<Tables<"doctor_profiles"> | null>;
   getDoctorAvailability(doctorId: string): Promise<DoctorAvailabilityRecord[]>;
-  updateDoctorAvailability(doctorId: string, input: TablesInsert<"doctor_availability">[]): Promise<Tables<"doctor_availability">[]>;
+  updateDoctorAvailability(doctorId: string, input: TablesInsert<"doctor_availability">[]): Promise<AvailabilityUpdateResult>;
   getDoctorBlockedDates(doctorId: string): Promise<Tables<"doctor_blocked_dates">[]>;
-  blockDoctorDate(input: TablesInsert<"doctor_blocked_dates">): Promise<Tables<"doctor_blocked_dates">>;
+  blockDoctorDate(input: TablesInsert<"doctor_blocked_dates">): Promise<BlockedDateResult>;
   getAvailableSlots(doctorId: string, date: string): Promise<Tables<"appointment_slots">[]>;
   generateSlotsForDoctor(doctorId: string, dateOrRange: string | { from: string; to: string }): Promise<Tables<"appointment_slots">[]>;
   getConsultations(filters?: string | ConsultationFilters): Promise<ConsultationRecord[]>;

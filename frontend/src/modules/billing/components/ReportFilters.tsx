@@ -2,15 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Input, Select } from "../../../components/ui";
 import { services } from "../../../services/serviceProvider";
 import type { ReportDateFilter } from "../types";
+import { localDateISO, addDaysISO } from "../../../utils/formatDate";
 
 export type ReportFilterValue = { dateFrom?: string; dateTo?: string; doctorId?: string; branchId?: string };
 
-const isoDate = (date: Date) => date.toISOString().slice(0, 10);
-const shift = (days: number) => {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return isoDate(date);
-};
+const isoDate = (date: Date) => localDateISO(date);
+const shift = (days: number) => addDaysISO(localDateISO(), days);
 
 function rangeFor(preset: ReportDateFilter): { dateFrom?: string; dateTo?: string } {
   const today = isoDate(new Date());

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { CalendarDays, Clock3, MapPin, Phone } from "lucide-react";
 import { BrandLogo, Button } from "../../../components/ui";
 import type { BookingDoctor, ClinicBookingProfile } from "../types";
@@ -10,7 +11,7 @@ export function ClinicHero({ clinic, doctors = [] }: { clinic: ClinicBookingProf
     <div className="grid gap-6 p-6 md:grid-cols-[1fr_.8fr] md:p-8">
       <div>
         <div className="flex items-center gap-4">
-          <div className="rounded-xl bg-white p-1"><BrandLogo className="size-16" /></div>
+          <Link to="/" title="Vernex Home" className="transition hover:opacity-90"><div className="rounded-xl bg-white p-1"><BrandLogo className="size-16" /></div></Link>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[.18em] text-brand-100">Book Your Appointment</p>
             <h1 className="font-['Manrope'] text-3xl font-semibold">{clinic.name}</h1>

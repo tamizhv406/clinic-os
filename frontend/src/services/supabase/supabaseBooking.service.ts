@@ -6,6 +6,7 @@ import type {
   BookingDoctor,
   BookingService,
   BookingStatusResult,
+  PatientAppointmentItem,
   ClinicBookingProfile,
   ClinicDirectoryEntry,
 } from "../../modules/patient-booking/types";
@@ -41,7 +42,8 @@ type PublicBookingRpc =
   | "public_doctor_available_dates"
   | "public_doctor_available_slots"
   | "public_create_booking"
-  | "public_booking_status";
+  | "public_booking_status"
+  | "public_lookup_appointments";
 
 /** All public booking RPCs return a single jsonb payload, so one helper covers them. */
 async function callRpc(name: PublicBookingRpc, args: Record<string, unknown>): Promise<Json | null> {
@@ -142,7 +144,7 @@ export const supabaseBookingService: PublicBookingService = {
     const result: PublicBookingResult = {
       bookingId: text(row, "bookingId"),
       token: text(row, "token"),
-      status: (["confirmed", "pending", "cancelled", "completed"].includes(text(row, "status")) ? text(row, "status") : "confirmed") as BookingStatusResult["status"],
+      status: (text(row, "status") || "booked") as BookingStatusResult["status"],
       clinicName: text(row, "clinicName"),
       clinicSlug: text(row, "clinicSlug", input.clinicSlug),
       doctorName: text(row, "doctorName"),
@@ -161,11 +163,30 @@ export const supabaseBookingService: PublicBookingService = {
     return {
       bookingId: text(row, "bookingId"),
       token: text(row, "token"),
-      status: (["confirmed", "pending", "cancelled", "completed"].includes(text(row, "status")) ? text(row, "status") : "pending") as BookingStatusResult["status"],
+      status: (text(row, "status") || "booked") as BookingStatusResult["status"],
       clinicName: text(row, "clinicName"),
+      clinicSlug: text(row, "clinicSlug"),
       doctorName: text(row, "doctorName"),
       patientName: text(row, "patientName"),
       dateTime: text(row, "dateTime"),
     };
+  },
+  async getMyAppointments(clinicSlug: string, phone: string) {
+    const rows = asArray(await callRpc("public_lookup_appointments", { p_clinic_slug: clinicSlug, p_phone: phone }));
+    return rows.map((row): PatientAppointmentItem => ({
+      bookingId: text(row, "bookingId"),
+      token: text(row, "token"),
+      date: text(row, "date"),
+      time: text(row, "time"),
+      doctorName: text(row, "doctorName"),
+      doctorSpecialty: text(row, "doctorSpecialty"),
+      clinicName: text(row, "clinicName"),
+      clinicAddress: text(row, "clinicAddress"),
+      patientName: text(row, "patientName"),
+      status: (text(row, "status") || "booked") as PatientAppointmentItem["status"],
+      serviceName: text(row, "serviceName") || undefined,
+      isUpcoming: bool(row, "isUpcoming"),
+      instructions: text(row, "instructions", "Show your token number at reception."),
+    }));
   },
 };

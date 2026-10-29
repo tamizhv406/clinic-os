@@ -7,6 +7,7 @@ import { Input } from "../../components/common/Input";
 import { BrandLogo } from "../../components/common/BrandLogo";
 import { useAuth } from "../../hooks/useAuth";
 export default function Login() {
+  useEffect(() => { document.title = "Staff Login · Vernex Clinic OS"; }, []);
   const navigate = useNavigate(); const auth = useAuth(); const [show, setShow] = useState(false); const [loading, setLoading] = useState(false); const [error, setError] = useState("");
   // An existing session goes straight to the role's home. A session with no usable
   // staff context (profile missing, inactive, clinic suspended) is signed out with the

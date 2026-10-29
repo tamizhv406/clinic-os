@@ -148,7 +148,7 @@ export default function OwnerDashboard() {
 
   const today = new Date().toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 
-  return <><PageHeader title="Clinic overview" description={`Hereâ€™s how ${clinicName} is doing today.`} action={<span className="rounded-xl border bg-white px-4 py-2 text-sm font-semibold text-slate-700">{today}</span>} />
+  return <><PageHeader title="Clinic overview" description={`Here's how ${clinicName} is doing today.`} action={<span className="rounded-xl border bg-white px-4 py-2 text-sm font-semibold text-slate-700">{today}</span>} />
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{stats.map(([label, value, detail, icon, tone]) => <StatsCard key={label} label={label} value={value} detail={detail} icon={icon} tone={tone} />)}</div>
     <div className="mt-6 grid gap-4 xl:grid-cols-[1.55fr_1fr]">
       <Card className="p-4 md:p-5"><div className="mb-5 flex items-center justify-between"><div><h2 className="font-semibold">Revenue trend</h2><p className="text-xs text-slate-500">Collections recorded this period</p></div><span className="text-sm font-semibold text-success-700">{formatCurrency(revenue?.totalRevenue ?? 0)}</span></div>
@@ -159,7 +159,7 @@ export default function OwnerDashboard() {
       </Card>
     </div>
     <div className="mt-5 grid gap-4 xl:grid-cols-2">
-      <Card className="overflow-hidden"><div className="flex items-center justify-between p-5"><div><h2 className="font-semibold">Todayâ€™s appointments</h2><p className="text-xs text-slate-500">Next patients across all doctors</p></div><Link className="text-sm font-semibold text-brand-700" to="/reception/appointments">View all</Link></div>
+      <Card className="overflow-hidden"><div className="flex items-center justify-between p-5"><div><h2 className="font-semibold">Today's appointments</h2><p className="text-xs text-slate-500">Next patients across all doctors</p></div><Link className="text-sm font-semibold text-brand-700" to="/reception/appointments">View all</Link></div>
         {appointments.length > 0 ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Patient</th><th>Doctor</th><th>Time</th><th>Status</th></tr></thead><tbody>{appointments.map((appointment) => <tr key={appointment.id}><td className="font-semibold">{appointment.patientName}</td><td className="text-slate-500">{appointment.doctorName}</td><td>{appointment.time}</td><td><StatusPill status={appointment.status} /></td></tr>)}</tbody></table></div> : <div className="p-5"><EmptyState title="No appointments today" description="New bookings will show up here." /></div>}
       </Card>
       <Card className="p-4 md:p-5"><h2 className="font-semibold">Doctor-wise revenue</h2><p className="text-xs text-slate-500">Collections attributed to each doctor</p>

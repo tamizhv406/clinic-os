@@ -10,6 +10,7 @@ export default function ClinicDirectory() {
   const [clinics, setClinics] = useState<ClinicDirectoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  useEffect(() => { document.title = "Choose a Clinic · Vernex Clinic OS"; }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -31,7 +32,7 @@ export default function ClinicDirectory() {
   return <main className="min-h-screen bg-slate-50 px-4 py-8">
     <div className="mx-auto max-w-4xl space-y-6">
       <header className="text-center">
-        <div className="mx-auto w-fit rounded-xl bg-white p-2 shadow-card"><BrandLogo className="size-14" /></div>
+        <div className="mx-auto w-fit rounded-xl bg-white p-2 shadow-card"><Link to="/" title="Vernex Home"><BrandLogo className="size-14" /></Link></div>
         <h1 className="mt-4 font-['Manrope'] text-2xl font-semibold text-slate-800 sm:text-3xl">Choose a clinic</h1>
         <p className="mt-1 text-sm text-slate-500">Select a clinic below to book your appointment.</p>
       </header>

@@ -4,6 +4,7 @@ import type {
   BookingDoctor,
   BookingService as BookingServiceOption,
   BookingStatusResult,
+  PatientAppointmentItem,
   ClinicBookingProfile,
   ClinicDirectoryEntry,
   PatientBookingInput,
@@ -41,4 +42,5 @@ export interface PublicBookingService {
   getAvailableSlots(doctorId: string, date: string): Promise<AvailableSlot[]>;
   createBooking(input: CreatePublicBookingInput): Promise<PublicBookingResult>;
   getBookingStatus(phone: string, reference: string): Promise<BookingStatusResult | null>;
+  getMyAppointments(clinicSlug: string, phone: string): Promise<PatientAppointmentItem[]>;
 }

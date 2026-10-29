@@ -39,7 +39,6 @@ function mapMedicine(row: MedicineRow): MedicineRecord {
 }
 
 function stockStatus(batch: BatchRow, medicine?: MedicineRow | null): StockStatus {
-  if (batch.expiry_date && batch.expiry_date < new Date().toISOString().slice(0, 10)) return "expired";
   if ((batch.quantity_available ?? 0) <= 0) return "out_of_stock";
   if ((batch.quantity_available ?? 0) <= (medicine?.reorder_level ?? 0)) return "low_stock";
   return "in_stock";
@@ -264,7 +263,6 @@ export const supabasePharmacyDomainService: PharmacyDomainService = {
   },
 
   async getMedicineAvailability() {
-    const today = localDateISO();
     const [{ data: medicines, error }, { data: batches, error: batchError }] = await Promise.all([
       supabase.from("medicines").select("id,name").eq("status", "active").order("name", { ascending: true }),
       supabase.from("medicine_stock_batches").select("medicine_id,quantity_available,expiry_date,status").eq("status", "active").gt("quantity_available", 0),
@@ -273,7 +271,7 @@ export const supabasePharmacyDomainService: PharmacyDomainService = {
     if (batchError) throw batchError;
     const units = new Map<string, number>();
     for (const batch of batches ?? []) {
-      if (batch.expiry_date && batch.expiry_date < today) continue;
+      if (batch.expiry_date && batch.expiry_date < localDateISO()) continue;
       units.set(batch.medicine_id, (units.get(batch.medicine_id) ?? 0) + batch.quantity_available);
     }
     return (medicines ?? []).map((medicine) => ({ id: medicine.id, name: medicine.name, availableUnits: units.get(medicine.id) ?? 0 }));

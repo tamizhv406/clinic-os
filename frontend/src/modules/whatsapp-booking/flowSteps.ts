@@ -10,5 +10,5 @@ export const bookingFlowSteps: WhatsAppFlowStep[] = [
   { id: "f3", title: "Doctor, date and slot", description: "Only doctors with published availability and open slots are offered.", sampleMessage: "Choose a doctor and an available time slot." },
   { id: "f4", title: "One question at a time", description: "Name, age, gender, problem and new/existing patient status are collected.", sampleMessage: "What problem are you facing?" },
   { id: "f5", title: "Summary before confirmation", description: "The patient confirms before the appointment reaches the clinic dashboards.", sampleMessage: "Please confirm this booking summary." },
-  { id: "f6", title: "Clinic dashboards update", description: "Reception and the doctor queue receive the appointment with a token number.", sampleMessage: "Your appointment is confirmed." },
+  { id: "f6", title: "Clinic dashboards update", description: "Reception and the doctor queue receive the appointment with a token number.", sampleMessage: "Your appointment is booked. Your slot is reserved." },
 ];
