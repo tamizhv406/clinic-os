@@ -16,3 +16,9 @@ frontend/.env.local
 node_modules/
 dist/
 .vercel/
+
+# Local secrets (service role key etc.) - never commit
+scrips/
+scripts/.secret*
+.secret.env
+*.secret.env

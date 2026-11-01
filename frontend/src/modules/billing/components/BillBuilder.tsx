@@ -139,7 +139,7 @@ export function BillBuilder() {
     }
   };
 
-  return <form onSubmit={(event) => { event.preventDefault(); void save(); }} className="grid gap-4 xl:grid-cols-[1fr_.9fr]">
+  return <form onSubmit={(event) => { event.preventDefault(); void save(); }} className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,.9fr)]">
     <Card className="p-4 md:p-5">
       <h2 className="font-semibold">Create Bill</h2>
       <div className="mt-4 grid gap-4 md:grid-cols-3">
