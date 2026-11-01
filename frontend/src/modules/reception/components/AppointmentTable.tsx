@@ -1,7 +1,7 @@
 import { formatTime12 } from "../../../utils/formatDate";
 import { Button } from "../../../components/ui";
 import type { Appointment, AppointmentStatus } from "../types";
-import { sourceLabel } from "../utils";
+import { receptionActions, sourceLabel } from "../utils";
 import { AppointmentCard } from "./AppointmentCard";
 import { AppointmentStatusBadge, PaymentStatusBadge } from "./AppointmentStatusBadge";
 
@@ -30,10 +30,10 @@ export function AppointmentTable({ appointments, onStatusChange, onReschedule, o
         <td><AppointmentStatusBadge status={appointment.status} /></td>
         <td><PaymentStatusBadge status={appointment.paymentStatus} /></td>
         <td><div className="flex flex-wrap gap-2">
-          <Button variant="secondary" className="min-h-8 px-3 py-1" onClick={() => onStatusChange?.(appointment.id, "arrived")}>Arrived</Button>
-          <Button variant="secondary" className="min-h-8 px-3 py-1" onClick={() => onStatusChange?.(appointment.id, "waiting")}>Queue</Button>
-          {onReschedule && <Button variant="ghost" className="min-h-8 px-3 py-1" onClick={() => onReschedule(appointment)}>Reschedule</Button>}
-          {onCancel && <Button variant="ghost" className="min-h-8 px-3 py-1" onClick={() => onCancel(appointment)}>Cancel</Button>}
+          {receptionActions(appointment.status).canCheckIn && <Button variant="secondary" className="min-h-8 px-3 py-1" onClick={() => onStatusChange?.(appointment.id, "arrived")}>Check in</Button>}
+          {receptionActions(appointment.status).canQueue && appointment.status === "arrived" && <Button variant="secondary" className="min-h-8 px-3 py-1" onClick={() => onStatusChange?.(appointment.id, "waiting")}>Send to queue</Button>}
+          {onReschedule && receptionActions(appointment.status).canChange && <Button variant="ghost" className="min-h-8 px-3 py-1" onClick={() => onReschedule(appointment)}>Reschedule</Button>}
+          {onCancel && receptionActions(appointment.status).canChange && <Button variant="ghost" className="min-h-8 px-3 py-1" onClick={() => onCancel(appointment)}>Cancel</Button>}
         </div></td>
       </tr>)}</tbody>
     </table></div>

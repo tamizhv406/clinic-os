@@ -185,11 +185,20 @@ export function PrescriptionBuilder({ patient }: { patient: PatientProfile }) {
       setLoading(false);
     }
   };
-  // Complete Consultation = save (if needed) + finalize + send to pharmacy when ticked.
+  // Closing the visit: the consultation and its appointment must be marked completed, or
+  // the patient stays "with doctor" in every queue and report.
+  const closeVisit = async () => {
+    const [latest] = await services.doctor.getConsultationsByPatient(patient.id).catch(() => []);
+    if (latest && latest.status !== "completed" && latest.status !== "cancelled") await services.doctor.completeConsultation(latest.id);
+  };
+  // Complete Consultation = save (if needed) + finalize + send to pharmacy when ticked + close the visit.
   const completeConsultation = async () => {
     const doneMessage = sendToPharmacy ? "Consultation completed. Prescription sent to pharmacy." : "Consultation completed.";
     if (!savedPrescriptionId) {
-      if (await savePrescription({ finalize: true, send: sendToPharmacy })) { toast.success(doneMessage); navigate("/doctor/queue"); }
+      if (await savePrescription({ finalize: true, send: sendToPharmacy })) {
+        try { await closeVisit(); toast.success(doneMessage); navigate("/doctor/queue"); }
+        catch (error) { toast.error(error instanceof Error ? error.message : "The prescription was saved, but the visit could not be closed."); }
+      }
       return;
     }
     setLoading(true);
@@ -199,6 +208,7 @@ export function PrescriptionBuilder({ patient }: { patient: PatientProfile }) {
         const row = await services.doctor.routePrescriptionToPharmacy(savedPrescriptionId);
         setPharmacyStatus(row.pharmacy_status ?? "sent_to_pharmacy");
       }
+      await closeVisit();
       toast.success(doneMessage);
       navigate("/doctor/queue");
     } catch (error) {
