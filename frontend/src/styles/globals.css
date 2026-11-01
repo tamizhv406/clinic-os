@@ -4,6 +4,12 @@
 @tailwind utilities;
 
 @layer base {
+  /* Grid items default to min-width:auto, so one wide child (a chart, a table) stretches the
+     whole page past the screen on phones. Letting them shrink fixes it everywhere at once. */
+  .grid > * { min-width: 0; }
+  /* Chart tooltips are positioned off-screen until hovered and would widen the page on phones. */
+  .recharts-wrapper { overflow: hidden; }
+  html, body { overflow-x: clip; }
   * { @apply border-slate-200; }
   html { @apply bg-slate-50; }
   body { @apply m-0 bg-slate-50 font-['DM_Sans'] text-slate-900 antialiased; }
