@@ -10,18 +10,18 @@ export function InvoiceTable({ invoices, onView }: { invoices: Invoice[]; onView
 
   return <>
     <div className="grid gap-4 md:hidden">{invoices.map((invoice) => <InvoiceCard key={invoice.id} invoice={invoice} onView={onView ? () => onView(invoice) : undefined} />)}</div>
-    <div className="table-wrap hidden md:block"><table className="data-table">
-      <thead><tr><th>Invoice</th><th>Patient</th><th>Phone</th><th>Type</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th><th>Mode</th><th>Date</th>{onView && <th>Actions</th>}</tr></thead>
+    <div className="table-wrap hidden md:block [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap [&_td]:px-2.5 [&_th]:px-2.5"><table className="data-table">
+      <thead><tr><th>Invoice</th><th>Patient</th><th className="hidden 2xl:table-cell">Phone</th><th>Type</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th><th className="hidden 2xl:table-cell">Mode</th><th>Date</th>{onView && <th>Actions</th>}</tr></thead>
       <tbody>{invoices.map((invoice) => <tr key={invoice.id}>
         <td className="font-semibold">{invoice.id}</td>
         <td>{invoice.patientName}</td>
-        <td>{invoice.phone}</td>
+        <td className="hidden 2xl:table-cell">{invoice.phone}</td>
         <td>{billTypeLabel[invoice.billType]}</td>
         <td>{rupee(invoice.total)}</td>
         <td>{rupee(invoice.paidAmount)}</td>
         <td>{rupee(invoice.balance)}</td>
         <td><PaymentStatusBadge status={invoice.paymentStatus} /></td>
-        <td><PaymentModeBadge mode={invoice.paymentMode} /></td>
+        <td className="hidden 2xl:table-cell"><PaymentModeBadge mode={invoice.paymentMode} /></td>
         <td>{invoice.date}</td>
         {onView && <td><Button className="min-h-8 px-3 py-1" onClick={() => onView(invoice)}>View</Button></td>}
       </tr>)}</tbody>
