@@ -127,7 +127,7 @@ export default function PrescriptionQueue() {
     setSyncing(true);
     try {
       const created = await services.pharmacy.syncRoutedPrescriptions();
-      toast.success(created ? `Created ${created} missing order${created === 1 ? "" : "s"}.` : "Queue is up to date.");
+      toast.success(created ? `Updated ${created} prescription${created === 1 ? "" : "s"}.` : "Queue is up to date.");
       await refresh();
     } catch (syncError) {
       toast.error(syncError instanceof Error ? syncError.message : "Sync failed.");

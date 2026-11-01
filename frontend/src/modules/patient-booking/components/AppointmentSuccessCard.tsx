@@ -24,12 +24,12 @@ export function AppointmentSuccessCard({ result, clinic }: { result: BookingStat
       <StatusBadge tone={getAppointmentStatusTone(result.status)}>{getAppointmentStatusLabel(result.status, "compact")}</StatusBadge>
     </div>
     <div className="mt-5 rounded-xl bg-slate-50 p-4 text-left text-sm space-y-1.5">
-      <p><b>Booking ID:</b> {result.bookingId}</p>
+      <p><b>Booking ref:</b> {result.bookingId.slice(0, 8).toUpperCase()}</p>
       <p><b>Token:</b> <span className="font-semibold text-brand-700">{result.token}</span></p>
       <p><b>Doctor:</b> {result.doctorName}</p>
       <p><b>Date/time:</b> {result.dateTime}</p>
       <p><b>Patient:</b> {result.patientName}</p>
-      <p><b>Clinic:</b> {clinic.address || clinic.name}</p>
+      <p><b>Clinic:</b> {clinic.name}{clinic.address ? `, ${clinic.address}` : ""}</p>
     </div>
     <div className="mt-5 grid gap-2 sm:grid-cols-2">
       <a href={calendarHref(result, clinic)} target="_blank" rel="noreferrer"><Button className="w-full" variant="secondary" icon={<CalendarPlus className="size-4" />}>Add to Calendar</Button></a>

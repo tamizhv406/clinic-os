@@ -45,3 +45,20 @@ export function formatTime12(time: string | null | undefined): string {
   const displayHours = hours % 12 || 12;
   return `${String(displayHours).padStart(2, "0")}:${minutes} ${ampm}`;
 }
+
+/**
+ * "2026-11-01 10:03 PM" in India time, from a database timestamp (UTC). Database
+ * timestamps must never be sliced as text for display: that shows UTC, which is
+ * 5h30m behind the clinic's clock.
+ */
+export function formatDateTimeIST(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: true,
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")} ${get("dayPeriod").toUpperCase()}`;
+}

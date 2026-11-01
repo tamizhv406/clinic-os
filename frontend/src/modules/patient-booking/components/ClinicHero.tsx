@@ -34,7 +34,7 @@ export function ClinicHero({ clinic, doctors = [] }: { clinic: ClinicBookingProf
         <p className="font-semibold">Available today</p>
         <div className="mt-4 grid gap-4">
           {availableToday.length > 0
-            ? availableToday.slice(0, 4).map((doctor) => <div key={doctor.id} className="rounded-xl bg-white/10 p-3 text-sm">{doctor.name} Â· {doctor.specialization}</div>)
+            ? availableToday.slice(0, 4).map((doctor) => <div key={doctor.id} className="rounded-xl bg-white/10 p-3 text-sm">{doctor.name} · {doctor.specialization}</div>)
             : <p className="rounded-xl bg-white/10 p-3 text-sm">Pick a date in the booking flow to see open slots.</p>}
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { formatDateTimeIST } from "../../utils/formatDate";
 import type { Tables } from "../../shared/types/database.types";
 import type { BillType, Invoice, PaymentMode, PaymentStatus, PendingPayment, Receipt } from "./types";
 
@@ -30,7 +31,7 @@ export function toInvoice(row: InvoiceRow, items: InvoiceItemRow[] = [], patient
     balance: row.balance_amount ?? 0,
     paymentStatus: row.invoice_status === "cancelled" ? "cancelled" : normalizePaymentStatus(row.payment_status),
     paymentMode,
-    date: row.created_at?.slice(0, 16).replace("T", " ") ?? "",
+    date: formatDateTimeIST(row.created_at),
   };
 }
 
@@ -56,7 +57,7 @@ export function toReceipt(row: PaymentRow, invoice?: InvoiceRow | null, patient?
     amountPaid: row.amount,
     paymentMode: row.payment_mode as PaymentMode,
     linkedInvoice: invoice?.invoice_number ?? row.invoice_id,
-    dateTime: row.received_at?.slice(0, 16).replace("T", " ") ?? row.created_at?.slice(0, 16).replace("T", " ") ?? "",
+    dateTime: formatDateTimeIST(row.received_at) || formatDateTimeIST(row.created_at),
     receiptType: normalizeBillType(invoice?.invoice_type),
   };
 }

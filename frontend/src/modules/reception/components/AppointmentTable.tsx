@@ -1,3 +1,4 @@
+import { formatTime12 } from "../../../utils/formatDate";
 import { Button } from "../../../components/ui";
 import type { Appointment, AppointmentStatus } from "../types";
 import { sourceLabel } from "../utils";
@@ -19,7 +20,7 @@ export function AppointmentTable({ appointments, onStatusChange, onReschedule, o
     <div className="table-wrap hidden md:block"><table className="data-table">
       <thead><tr><th>Time</th><th>Token</th><th>Patient</th><th>Phone</th><th>Doctor</th><th>Service</th><th>Source</th><th>Status</th><th>Payment</th><th>Actions</th></tr></thead>
       <tbody>{appointments.map((appointment) => <tr key={appointment.id}>
-        <td className="font-semibold">{appointment.time}</td>
+        <td className="font-semibold">{formatTime12(appointment.time)}</td>
         <td><span className="rounded-lg bg-slate-100 px-2 py-1 font-semibold">{appointment.token}</span></td>
         <td className="font-semibold">{appointment.patientName}</td>
         <td>{appointment.phone}</td>

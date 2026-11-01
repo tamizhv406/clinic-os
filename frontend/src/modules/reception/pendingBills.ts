@@ -1,3 +1,4 @@
+import { formatDateTimeIST } from "../../utils/formatDate";
 import { services } from "../../services/serviceProvider";
 import type { BillingShortcut, PaymentMode, PaymentStatus } from "./types";
 
@@ -23,7 +24,7 @@ export async function loadPendingBills(): Promise<BillingShortcut[]> {
     paymentMode: "cash" as PaymentMode,
     paymentStatus: (detail!.payment_status === "partial" ? "partial" : "pending") as PaymentStatus,
     doctorName: (detail!.consultation_id ? doctorNames.get(detail!.consultation_id) : undefined) ?? "",
-    completedAt: detail!.created_at?.slice(0, 16).replace("T", " ") ?? "",
+    completedAt: formatDateTimeIST(detail!.created_at),
   }));
 }
 

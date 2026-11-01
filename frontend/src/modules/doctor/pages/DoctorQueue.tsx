@@ -32,7 +32,7 @@ export default function DoctorQueue() {
       new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Kolkata", hour: "numeric", hour12: false }).format(new Date())
     );
     const greeting = istHour < 12 ? "Good morning" : istHour < 17 ? "Good afternoon" : "Good evening";
-    const displayName = name ? (name.startsWith("Dr.") ? name : `Dr. ${name}`) : "Doctor";
+    const displayName = name ? (/^dr\.?\s/i.test(name) ? name : `Dr. ${name}`) : "Doctor";
     return `${greeting}, ${displayName}`;
   };
 

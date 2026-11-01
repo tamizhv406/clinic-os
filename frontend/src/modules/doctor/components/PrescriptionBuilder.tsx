@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button, Textarea } from "../../../components/ui";
 import { services } from "../../../services/serviceProvider";
 import { localDateISO } from "../../../utils/formatDate";
+import { estimatePrescribedQuantity } from "../../../utils/prescriptionQuantity";
 import type { LabTest, Medicine, PatientProfile, PrescriptionItem, PrescriptionTemplate, WhatsAppDeliveryStatus } from "../types";
 import { LabTestSuggestionPanel } from "./LabTestSuggestionPanel";
 import { MedicineReminderSetup } from "./MedicineReminderSetup";
@@ -125,7 +126,7 @@ export function PrescriptionBuilder({ patient }: { patient: PatientProfile }) {
           timing: item.timing,
           duration: item.duration,
           food_instruction: item.timing.toLowerCase().includes("before") ? "before_food" : "after_food",
-          quantity: item.quantity || null,
+          quantity: item.quantity || estimatePrescribedQuantity(item.dosage, item.frequency, item.duration) || null,
           instructions: item.instructions || null,
           sort_order: index,
           reminder_enabled: showReminders,
