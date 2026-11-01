@@ -1,5 +1,5 @@
 // End-to-end checks of the deployed create-staff Edge Function.
-import { asUser, api, SUPABASE_URL, ANON_KEY } from "../admin/_env.mjs";
+import { asUser, api, SUPABASE_URL, ANON_KEY, TEST_PASSWORD } from "../admin/_env.mjs";
 import { ok, summary } from "./check.mjs";
 
 const fn = (user, body) => fetch(`${SUPABASE_URL}/functions/v1/create-staff`, {
@@ -14,7 +14,7 @@ const W = by["test-metro-whitefield"], J = by["test-metro-jayanagar"], I = by["t
 const stamp = Date.now().toString(36);
 
 const sa = await asUser("super_admin@vernex.test");
-const pw = "Vnx#Test2026!";
+const pw = TEST_PASSWORD;
 
 // super admin creates an owner and a shared admin for a clinic it is not "in"
 let r = await fn(sa, { full_name: "FN Owner", email: `fn.owner.${stamp}@testmetro.test`, password: pw, role_key: "owner", clinic_id: W.id });
