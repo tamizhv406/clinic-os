@@ -150,6 +150,9 @@ async function createPlaceholderMessage(input: WhatsAppSendPlaceholderInput, mes
     deliveryStatus: "queued",
     metadata: { placeholder: true, noExternalApi: true, messageType },
   });
+  // Hand the queued message to the configured provider (simulator until the clinic goes
+  // live). Best effort: the message stays queued if this fails and can be retried.
+  void supabase.functions.invoke("whatsapp-dispatch", { body: { message_ids: [message.id] } }).catch(() => undefined);
   logAuditEvent({ clinicId: input.clinicId, branchId: input.branchId, eventType: "whatsapp_placeholder_sent", entityType: "whatsapp_messages", entityId: message.id, action: "send_placeholder", status: "success", severity: "info", message: "WhatsApp placeholder queued.", metadata: { noExternalApi: true, messageType, phone: input.phone, related_id: input.relatedId } });
   return message;
 }

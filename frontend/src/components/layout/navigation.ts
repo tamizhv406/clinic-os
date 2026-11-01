@@ -1,4 +1,4 @@
-import { Activity, Building2, CalendarClock, CalendarDays, ChartNoAxesCombined, ClipboardList, Headphones, LayoutDashboard, Package, PackagePlus, Pill, ReceiptIndianRupee, Settings, TriangleAlert, UserPlus, Users } from "lucide-react";
+import { Activity, Building2, CalendarClock, CalendarDays, ChartNoAxesCombined, ClipboardList, Headphones, LayoutDashboard, Package, PackagePlus, Pill, ReceiptIndianRupee, Settings, TriangleAlert, UserPlus, Users, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { canAccess } from "../../access-control/canAccess";
 import type { ModuleKey, PermissionKey, UserRecord } from "../../shared/types/domain";
@@ -11,6 +11,8 @@ const ownerNav: NavItem[] = [
   { label: "Dashboard", path: "/owner/dashboard", icon: LayoutDashboard, module: "dashboard" }, { label: "Appointments", path: "/reception/appointments", icon: CalendarDays, module: "appointments" },
   { label: "Patients", path: "/reception/new-patient", icon: Users, module: "patients" },
   { label: "Pharmacy", path: "/pharmacy/dashboard", icon: Pill, module: "pharmacy" },
+  { label: "Billing", path: "/billing/dashboard", icon: ReceiptIndianRupee, module: "billing" },
+  { label: "Pending Payments", path: "/billing/pending-payments", icon: Wallet, module: "billing" },
   { label: "Reports", path: "/billing/reports", icon: ChartNoAxesCombined, module: "reports" },
   { label: "Monitoring", path: "/monitoring", icon: Activity, module: "reports" },
   { label: "Staff", path: "/owner/staff", icon: UserPlus, module: "staff", permission: "manage" },
@@ -21,7 +23,9 @@ export const navForRole: Record<UserRole, NavItem[]> = {
   admin: ownerNav,
   receptionist: [
     { label: "Reception Dashboard", path: "/reception/dashboard", icon: LayoutDashboard, module: "dashboard" }, { label: "Appointments", path: "/reception/appointments", icon: CalendarDays, module: "appointments" },
-    { label: "Queue", path: "/reception/queue", icon: ClipboardList, module: "appointments" }, { label: "New Patient", path: "/reception/new-patient", icon: UserPlus, module: "patients", permission: "create" }
+    { label: "Queue", path: "/reception/queue", icon: ClipboardList, module: "appointments" }, { label: "New Patient", path: "/reception/new-patient", icon: UserPlus, module: "patients", permission: "create" },
+    { label: "Billing", path: "/billing/dashboard", icon: ReceiptIndianRupee, module: "billing" },
+    { label: "Pending Payments", path: "/billing/pending-payments", icon: Wallet, module: "billing" }
   ],
   doctor: [
     { label: "Queue", path: "/doctor/queue", icon: ClipboardList, module: "appointments" }, { label: "Availability", path: "/doctor/availability", icon: CalendarDays, module: "availability", permission: "configure" },

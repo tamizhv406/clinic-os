@@ -1,6 +1,7 @@
 import { StatusBadge } from "../../../components/common/StatusBadge";
 import { useEffect, useState } from "react";
 import { Plus, Send } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button, Textarea } from "../../../components/ui";
 import { services } from "../../../services/serviceProvider";
@@ -18,6 +19,7 @@ import { ReminderSchedulePreview } from "./ReminderSchedulePreview";
 
 const blank = (): PrescriptionItem => ({ id: crypto.randomUUID(), medicineName: "", dosage: "1 tablet", frequency: "1-0-1", timing: "After food", duration: "3 days", instructions: "", quantity: "" });
 export function PrescriptionBuilder({ patient }: { patient: PatientProfile }) {
+  const navigate = useNavigate();
   const [items, setItems] = useState<PrescriptionItem[]>([blank()]);
   const [favorites, setFavorites] = useState<Medicine[]>([]);
   const [templates, setTemplates] = useState<PrescriptionTemplate[]>([]);
@@ -187,7 +189,7 @@ export function PrescriptionBuilder({ patient }: { patient: PatientProfile }) {
   const completeConsultation = async () => {
     const doneMessage = sendToPharmacy ? "Consultation completed. Prescription sent to pharmacy." : "Consultation completed.";
     if (!savedPrescriptionId) {
-      if (await savePrescription({ finalize: true, send: sendToPharmacy })) toast.success(doneMessage);
+      if (await savePrescription({ finalize: true, send: sendToPharmacy })) { toast.success(doneMessage); navigate("/doctor/queue"); }
       return;
     }
     setLoading(true);
@@ -198,6 +200,7 @@ export function PrescriptionBuilder({ patient }: { patient: PatientProfile }) {
         setPharmacyStatus(row.pharmacy_status ?? "sent_to_pharmacy");
       }
       toast.success(doneMessage);
+      navigate("/doctor/queue");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to complete the consultation.");
     } finally {
