@@ -1,3 +1,4 @@
+import { formatTime12 } from "../../utils/formatDate";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarCheck, CircleDollarSign, Clock3, Pill, UserPlus, Users, WalletCards, Waypoints } from "lucide-react";
@@ -96,7 +97,7 @@ export default function OwnerDashboard() {
             id: appointment.id,
             patientName: patientNames.get(appointment.patientId) ?? "Patient",
             doctorName: doctorNames.get(appointment.doctorId) ?? "Unassigned",
-            time: appointment.time || "-",
+            time: formatTime12(appointment.time) || "-",
             status: appointment.status,
           })),
         );

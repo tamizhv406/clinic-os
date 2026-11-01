@@ -21,7 +21,8 @@ if (!have.has("test-metro-indiranagar")) {
   const s = await mk("TEST Solo Care Clinic", "test-solo-care", { new_organization_name: "TEST Solo Care" });
   ok(s.ok, "single-clinic brand", JSON.stringify(s.json));
 }
-const clinics = (await api("/rest/v1/clinics?select=id,slug,organization_id&slug=like.test-*")).json;
+const wanted = ["test-metro-indiranagar", "test-metro-whitefield", "test-metro-jayanagar", "test-solo-care"];
+const clinics = (await api(`/rest/v1/clinics?select=id,slug,organization_id&slug=in.(${wanted.join(",")})`)).json;
 const by = Object.fromEntries(clinics.map((c) => [c.slug, c]));
 ok(clinics.length === 4, "4 test clinics exist", String(clinics.length));
 ok(by["test-metro-indiranagar"].organization_id === by["test-metro-whitefield"].organization_id, "metro clinics share a brand");

@@ -8,7 +8,7 @@ const fn = (user, body) => fetch(`${SUPABASE_URL}/functions/v1/create-staff`, {
   body: JSON.stringify(body),
 }).then(async (r) => ({ status: r.status, ok: r.ok, json: await r.json().catch(() => null) }));
 
-const clinics = (await api("/rest/v1/clinics?select=id,slug,organization_id&slug=like.test-*")).json;
+const clinics = (await api("/rest/v1/clinics?select=id,slug,organization_id&slug=in.(test-metro-indiranagar,test-metro-whitefield,test-metro-jayanagar,test-solo-care)")).json;
 const by = Object.fromEntries(clinics.map((c) => [c.slug, c]));
 const W = by["test-metro-whitefield"], J = by["test-metro-jayanagar"], I = by["test-metro-indiranagar"], S = by["test-solo-care"];
 const stamp = Date.now().toString(36);
