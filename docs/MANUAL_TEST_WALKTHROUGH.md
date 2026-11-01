@@ -50,7 +50,7 @@ At the end of each page, tick **Works as described** if everything matched, or *
 ## What you need
 - A computer with the **Google Chrome** browser.
 - The website address. If the developer started the app on their own computer, the address is usually `http://localhost:5173`. Otherwise use the address you were given.
-- The **test password**. The developer keeps it in the file `scrips\.secret.env` on the line that starts with `TEST_PASSWORD=`. Ask the product owner for it. All test accounts below use the same password. Do not share it outside the team.
+- The **test password**, printed in the table of test people below. All the test accounts share it.
 - A phone (optional but recommended) for the phone-size checks.
 - A notebook or spreadsheet for your findings (see "Reporting a problem" below).
 
@@ -72,18 +72,21 @@ Many steps need two roles (for example a patient booking while reception watches
 Each window keeps its own sign-in. For a third person, use another browser such as Edge or Firefox.
 
 ## The test people
-Everyone uses the same test password. The first clinic, **TEST Metro Health - Jayanagar**, already has staff and a doctor with a schedule. Use it for Parts 1 to 11.
+The first clinic, **TEST Metro Health - Jayanagar**, already has staff and a doctor with a schedule. Use it for Parts 1 to 11.
 
-| Role | Email to sign in with | Who they are |
-|---|---|---|
-| Platform admin | `super_admin@vernex.test` | Runs the whole platform. Creates clinics. |
-| Owner | `owner.jayanagar@testmetro.test` | Owns the Jayanagar clinic. Views, cannot add staff. |
-| Admin (shared) | `admin@testmetro.test` | Manages three clinics: Indiranagar, Whitefield, Jayanagar. |
-| Receptionist | `reception@testjay.test` | Front desk of Jayanagar (Kavya). |
-| Doctor | `doctor@testjay.test` | Dr Meera Rao, Jayanagar. |
-| Pharmacist | `pharmacist@testjay.test` | Pharmacy of Jayanagar (Ravi). |
-| Owner of another clinic | `owner.whitefield@testmetro.test` | Same brand, different clinic. Used for privacy tests. |
-| Owner of an unrelated brand | `owner@testsolo.test` | A completely separate business. Used for privacy tests. |
+| Role | Email to sign in with | Password | Who they are |
+|---|---|---|---|
+| Platform admin | `super_admin@vernex.test` | `{{TEST_PASSWORD}}` | Runs the whole platform. Creates clinics. |
+| Owner | `owner.jayanagar@testmetro.test` | `{{TEST_PASSWORD}}` | Owns the Jayanagar clinic. Views, cannot add staff. |
+| Admin (shared) | `admin@testmetro.test` | `{{TEST_PASSWORD}}` | Manages three clinics: Indiranagar, Whitefield, Jayanagar. |
+| Receptionist | `reception@testjay.test` | `{{TEST_PASSWORD}}` | Front desk of Jayanagar (Kavya). |
+| Doctor | `doctor@testjay.test` | `{{TEST_PASSWORD}}` | Dr Meera Rao, Jayanagar. |
+| Pharmacist | `pharmacist@testjay.test` | `{{TEST_PASSWORD}}` | Pharmacy of Jayanagar (Ravi). |
+| Owner of another clinic | `owner.whitefield@testmetro.test` | `{{TEST_PASSWORD}}` | Same brand, different clinic. Used for privacy tests. |
+| Owner of an unrelated brand | `owner@testsolo.test` | `{{TEST_PASSWORD}}` | A completely separate business. Used for privacy tests. |
+| Admin of an unrelated brand | `admin@testsolo.test` | `{{TEST_PASSWORD}}` | Same separate business. Used for privacy tests. |
+
+NOTE: Every account above uses the **same password**, shown in the table. The accounts you create yourself in Part 3 use the password you choose there. Anyone holding this PDF can sign in to the test system, so share it only inside the team, and never use these passwords for anything real.
 
 NOTE: Dr Meera Rao works **Monday to Saturday, 9:00 AM to 5:00 PM, with a lunch break 1:00 to 2:00 PM**, in 15-minute slots. She also has a late test session on **Sunday, 10:00 PM to 11:45 PM**. Slots that are already in the past today are never offered, so if the working hours for today are over, choose tomorrow when a step says "pick a date".
 

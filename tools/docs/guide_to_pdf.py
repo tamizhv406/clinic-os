@@ -137,9 +137,27 @@ def picture(path, cap, base):
     return [KeepTogether([t, Paragraph(inline(cap), caption)])]
 
 
+def load_secrets():
+    """{{NAME}} placeholders in the guide are filled from the git-ignored scrips/.secret.env."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "scrips", ".secret.env")
+    values = {}
+    if os.path.exists(path):
+        for line in open(path, encoding="utf8"):
+            if "=" in line and not line.strip().startswith("#"):
+                key, val = line.split("=", 1)
+                values[key.strip()] = val.strip()
+    return values
+
+
 def build(src, dst):
     base = os.path.dirname(os.path.abspath(src))
-    lines = open(src, encoding="utf8").read().splitlines()
+    text = open(src, encoding="utf8").read()
+    for key, val in load_secrets().items():
+        text = text.replace("{{%s}}" % key, val)
+    if "{{" in text:
+        missing = sorted(set(re.findall(r"\{\{(\w+)\}\}", text)))
+        raise SystemExit("Unfilled placeholders (add them to scrips/.secret.env): %s" % ", ".join(missing))
+    lines = text.splitlines()
     story, i, first_h1 = [], 0, not any(l.startswith("COVER_TITLE:") for l in lines)
     while i < len(lines):
         line = lines[i]
@@ -184,7 +202,12 @@ def build(src, dst):
             i -= 1
             ncols = len(rows[0])
             data = [[Paragraph(inline(c), cellhead if r == 0 else cell) for c in row] for r, row in enumerate(rows)]
-            weights = {2: [1.1, 3.0], 3: [1.3, 2.4, 2.2], 4: [1.5, 2.2, 2.2, 1.0]}.get(ncols, [1.0] * ncols)
+            head = rows[0][0].lower()
+            weights = {2: [1.1, 3.0], 3: [1.3, 2.4, 2.2], 4: [1.0, 1.0, 1.0, 1.0]}.get(ncols, [1.0] * ncols)
+            if ncols == 4 and head == "step":
+                weights = [0.45, 1.25, 3.0, 2.4]
+            elif ncols == 4 and head == "role":
+                weights = [1.2, 2.3, 1.7, 2.3]
             tot = sum(weights)
             table = Table(data, colWidths=[PAGE_W * w / tot for w in weights], repeatRows=1)
             table.setStyle(TableStyle([
