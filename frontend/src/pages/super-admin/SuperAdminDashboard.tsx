@@ -5,9 +5,8 @@ import { permissionKeys } from "../../access-control/permissions";
 import { Button, Card, Input, PageHeader, Select, StatsCard, StatusPill } from "../../components/ui";
 import { services } from "../../services/serviceProvider";
 import type { BranchRecord, ClinicRecord, ModuleKey, UserRecord } from "../../shared/types/domain";
-import type { UserRole } from "../../types/user";
+import type { BrandRecord, ClinicAccessRecord, CreateStaffLoginInput } from "../../services/interfaces";
 
-const roles: UserRole[] = ["owner", "admin", "receptionist", "doctor", "pharmacist", "super_admin"];
 
 export default function SuperAdminDashboard() {
   const [clinics, setClinics] = useState<ClinicRecord[]>([]);
@@ -19,6 +18,15 @@ export default function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [brands, setBrands] = useState<BrandRecord[]>([]);
+  const [brandByClinic, setBrandByClinic] = useState<Map<string, string | null>>(new Map());
+  const [access, setAccess] = useState<ClinicAccessRecord[]>([]);
+  const [newClinicBrand, setNewClinicBrand] = useState("");
+  const [loginRole, setLoginRole] = useState<CreateStaffLoginInput["role_key"]>("owner");
+  const [loginClinicId, setLoginClinicId] = useState("");
+  const [extraClinicIds, setExtraClinicIds] = useState<string[]>([]);
+  const [shareStaffId, setShareStaffId] = useState("");
+  const [shareClinicId, setShareClinicId] = useState("");
 
   const selectedClinic = clinics.find((clinic) => clinic.id === selectedClinicId) ?? clinics[0];
   const selectedClinicBranches = branches.filter((branch) => branch.clinicId === selectedClinic?.id);
@@ -33,6 +41,10 @@ export default function SuperAdminDashboard() {
       const nextClinics = await services.clinics.getClinics();
       const nextBranches = (await Promise.all(nextClinics.map((clinic) => services.clinics.getBranches(clinic.id)))).flat();
       const nextStaff = await services.users.getStaffUsers();
+      const [nextBrands, nextBrandMap, nextAccess] = await Promise.all([services.brands.getBrands(), services.brands.getClinicBrandIds(), services.brands.getClinicAccess()]);
+      setBrands(nextBrands);
+      setBrandByClinic(nextBrandMap);
+      setAccess(nextAccess);
       setClinics(nextClinics);
       setBranches(nextBranches);
       setStaff(nextStaff);
@@ -53,23 +65,28 @@ export default function SuperAdminDashboard() {
     setSelectedModules(clinic.enabledModules);
   };
 
+  const brandName = (clinicId: string) => brands.find((brand) => brand.id === brandByClinic.get(clinicId))?.name ?? "-";
+
   const createClinic = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setSaving(true); setMessage("");
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     try {
-      const clinic = await services.clinics.createClinic({
-        name: String(form.get("name") ?? ""),
-        slug: String(form.get("slug") ?? ""),
-        clinic_mode: String(form.get("clinic_mode") ?? "single_speciality") as never,
+      const created = await services.brands.createClinic({
+        name: String(form.get("name") ?? "").trim(),
+        slug: String(form.get("slug") ?? "").trim().toLowerCase(),
+        clinicMode: String(form.get("clinic_mode") ?? "single_speciality") as "single_speciality" | "multi_speciality",
         specialty: String(form.get("specialty") ?? ""),
         phone: String(form.get("phone") ?? ""),
         email: String(form.get("email") ?? ""),
         address: String(form.get("address") ?? ""),
-        status: "trial",
-        enabledModules: selectedModules,
+        organizationId: newClinicBrand || null,
+        newOrganizationName: newClinicBrand ? undefined : String(form.get("new_brand") ?? "").trim(),
       });
-      setMessage(`Created clinic ${clinic.name}.`);
-      event.currentTarget.reset();
+      setMessage("Clinic created with a main branch and all modules enabled. Next: create its owner and admin below.");
+      formElement.reset();
+      setNewClinicBrand("");
+      setLoginClinicId(created.clinicId);
       await loadAdminData();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to create clinic.");
@@ -100,29 +117,64 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const createStaff = async (event: React.FormEvent<HTMLFormElement>) => {
+  const loginTarget = loginClinicId || selectedClinic?.id || "";
+  const siblingClinics = clinics.filter((clinic) => clinic.id !== loginTarget && brandByClinic.get(clinic.id) && brandByClinic.get(clinic.id) === brandByClinic.get(loginTarget));
+
+  const createLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setSaving(true); setMessage("");
-    const form = new FormData(event.currentTarget);
-    const role = String(form.get("role_key") ?? "owner") as UserRole;
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     try {
-      const profile = await services.users.createStaffProfile({
-        id: String(form.get("auth_user_id") ?? ""),
-        clinic_id: role === "super_admin" ? null : String(form.get("clinic_id") ?? selectedClinic?.id ?? ""),
-        branch_id: role === "super_admin" ? null : String(form.get("branch_id") ?? "") || null,
-        role_key: role,
-        full_name: String(form.get("full_name") ?? ""),
-        user_id: String(form.get("user_id") ?? ""),
-        email: String(form.get("email") ?? ""),
-        phone: String(form.get("phone") ?? ""),
-        status: "active",
+      const { staff: created, staffCode } = await services.users.createStaffLogin({
+        full_name: String(form.get("full_name") ?? "").trim(),
+        email: String(form.get("email") ?? "").trim(),
+        password: String(form.get("password") ?? ""),
+        phone: String(form.get("phone") ?? "").trim() || undefined,
+        role_key: loginRole,
+        clinic_id: loginTarget,
+        extra_clinic_ids: extraClinicIds,
       });
-      await services.users.assignStaffModules(profile.id, selectedModules);
-      await services.users.assignStaffPermissions(profile.id, permissionOptions);
-      setMessage(`Created staff profile ${profile.fullName}.`);
-      event.currentTarget.reset();
+      setMessage(`Created ${loginRole} login for ${created.fullName} (staff ID ${staffCode}). They can sign in with ${String(form.get("email"))}.`);
+      formElement.reset();
+      setExtraClinicIds([]);
       await loadAdminData();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to create staff profile.");
+      setMessage(error instanceof Error ? error.message : "Unable to create the login.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const shareTarget = staff.find((user) => user.id === shareStaffId);
+  const shareableClinics = clinics.filter((clinic) => {
+    const staffClinicIds = access.filter((row) => row.staffId === shareStaffId).map((row) => row.clinicId);
+    const staffBrands = new Set(staffClinicIds.map((id) => brandByClinic.get(id)));
+    return shareTarget && !staffClinicIds.includes(clinic.id) && staffBrands.has(brandByClinic.get(clinic.id));
+  });
+
+  const grantAccess = async () => {
+    if (!shareStaffId || !shareClinicId) return;
+    setSaving(true); setMessage("");
+    try {
+      await services.brands.grantClinicAccess(shareStaffId, shareClinicId);
+      setMessage("Access granted. They can switch between these clinics from the top bar.");
+      setShareClinicId("");
+      await loadAdminData();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to grant access.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const revokeAccess = async (staffId: string, clinicId: string) => {
+    setSaving(true); setMessage("");
+    try {
+      await services.brands.revokeClinicAccess(staffId, clinicId);
+      setMessage("Access removed.");
+      await loadAdminData();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to remove access.");
     } finally {
       setSaving(false);
     }
@@ -191,8 +243,15 @@ export default function SuperAdminDashboard() {
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5"><StatsCard label="Total clinics" value={loading ? "..." : String(clinics.length)} detail="Clinic records" icon={Building2}/><StatsCard label="Active clinics" value={String(activeCount)} detail="RLS scoped" icon={Building2} tone="blue"/><StatsCard label="Trial clinics" value={String(trialCount)} detail="Onboarding" icon={FlaskConical} tone="amber"/><StatsCard label="Suspended/expired" value={String(suspendedCount)} detail="Needs admin action" icon={CircleOff} tone="violet"/><StatsCard label="Staff profiles" value={String(staff.length)} detail="Auth-linked records" icon={Users}/></div>
     {message && <div className="mt-4 rounded-xl bg-brand-50 p-3 text-sm font-semibold text-brand-700">{message}</div>}
     <div className="mt-5 grid gap-4 xl:grid-cols-[1.1fr_.9fr]">
-      <Card className="overflow-hidden"><div className="p-5"><h2 className="font-semibold">Clinics</h2><p className="text-xs text-slate-500">Clinic records</p></div><div className="table-wrap"><table className="data-table"><thead><tr><th>Clinic</th><th>Slug</th><th className="numeric">Modules</th><th>Status</th><th>Action</th></tr></thead><tbody>{clinics.map((clinic) => <tr key={clinic.id} onClick={() => selectClinic(clinic)} className="cursor-pointer"><td className="font-semibold">{clinic.name}</td><td>{clinic.slug}</td><td className="numeric">{clinic.enabledModules.length}</td><td><StatusPill status={clinic.status}/></td><td><Button size="sm" variant="secondary" disabled={saving} onClick={(event) => { event.stopPropagation(); void setClinicStatus(clinic.id, clinic.status === "active" ? "suspended" : "active"); }}>{clinic.status === "active" ? "Suspend" : "Activate"}</Button></td></tr>)}</tbody></table></div></Card>
-      <Card className="p-4 md:p-5"><h2 className="font-semibold">Create clinic</h2><form onSubmit={createClinic} className="mt-4 grid gap-4"><Input name="name" placeholder="Clinic name" required/><Input name="slug" placeholder="clinic-slug" required/><Select name="clinic_mode" defaultValue="single_speciality"><option value="single_speciality">Single speciality</option><option value="multi_speciality">Multi speciality</option></Select><Input name="specialty" placeholder="Specialty"/><Input name="phone" placeholder="Phone"/><Input name="email" placeholder="Email"/><Input name="address" placeholder="Address"/><Button type="submit" loading={saving}>Create clinic</Button></form></Card>
+      <Card className="overflow-hidden"><div className="p-5"><h2 className="font-semibold">Clinics</h2><p className="text-xs text-slate-500">Clinic records</p></div><div className="table-wrap"><table className="data-table"><thead><tr><th>Clinic</th><th>Brand</th><th>Slug</th><th className="numeric">Modules</th><th>Status</th><th>Action</th></tr></thead><tbody>{clinics.map((clinic) => <tr key={clinic.id} onClick={() => selectClinic(clinic)} className="cursor-pointer"><td className="font-semibold">{clinic.name}</td><td>{brandName(clinic.id)}</td><td>{clinic.slug}</td><td className="numeric">{clinic.enabledModules.length}</td><td><StatusPill status={clinic.status}/></td><td><Button size="sm" variant="secondary" disabled={saving} onClick={(event) => { event.stopPropagation(); void setClinicStatus(clinic.id, clinic.status === "active" ? "suspended" : "active"); }}>{clinic.status === "active" ? "Suspend" : "Activate"}</Button></td></tr>)}</tbody></table></div></Card>
+      <Card className="p-4 md:p-5"><h2 className="font-semibold">Create clinic</h2><p className="mt-1 text-xs text-slate-500">A clinic is one location. Group several under a brand (for example a hospital chain) so their admins can be shared.</p>
+        <form onSubmit={createClinic} className="mt-4 grid gap-4">
+          <Select aria-label="Brand" value={newClinicBrand} onChange={(event) => setNewClinicBrand(event.target.value)}><option value="">New brand</option>{brands.map((brand) => <option key={brand.id} value={brand.id}>Add to brand: {brand.name}</option>)}</Select>
+          {!newClinicBrand && <Input name="new_brand" placeholder="Brand name (leave empty to use the clinic name)"/>}
+          <Input name="name" placeholder="Clinic name" required/><Input name="slug" placeholder="clinic-slug (lowercase, hyphens)" pattern="[a-z0-9]+(-[a-z0-9]+)*" title="Lowercase letters, numbers and single hyphens" required/>
+          <Select name="clinic_mode" defaultValue="single_speciality"><option value="single_speciality">Single speciality</option><option value="multi_speciality">Multi speciality</option></Select>
+          <Input name="specialty" placeholder="Specialty"/><Input name="phone" placeholder="Phone"/><Input name="email" placeholder="Email"/><Input name="address" placeholder="Address"/>
+          <Button type="submit" loading={saving}>Create clinic</Button></form></Card>
     </div>
     <div className="mt-5 grid gap-4 xl:grid-cols-2">
       <Card className="p-4 md:p-5"><h2 className="font-semibold">Enabled modules</h2><div className="mt-4 grid gap-2 sm:grid-cols-2">{moduleKeys.map((module) => <label key={module} className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={selectedModules.includes(module)} onChange={() => toggleModule(module)}/>{module}</label>)}</div><Button className="mt-4" variant="secondary" loading={saving} disabled={!selectedClinic} onClick={() => void saveSelectedClinicModules()}>Save to selected clinic</Button></Card>
@@ -200,8 +259,21 @@ export default function SuperAdminDashboard() {
     </div>
     <div className="mt-5 grid gap-4 xl:grid-cols-2">
       <Card className="p-4 md:p-5"><h2 className="font-semibold">Branch management</h2><Select className="mt-4" value={selectedClinic?.id ?? ""} onChange={(event) => setSelectedClinicId(event.target.value)}>{clinics.map((clinic) => <option key={clinic.id} value={clinic.id}>{clinic.name}</option>)}</Select><form onSubmit={createBranch} className="mt-4 grid gap-4"><Input name="name" placeholder="Branch name" required/><Input name="phone" placeholder="Phone"/><Input name="address" placeholder="Address"/><label className="flex items-center gap-2 text-sm font-semibold"><input name="is_main" type="checkbox"/> Main branch</label><Button type="submit" loading={saving} disabled={!selectedClinic}>Create branch</Button></form><div className="mt-4 space-y-2">{selectedClinicBranches.map((branch) => <div key={branch.id} className="rounded-lg border p-3 text-sm"><b>{branch.name}</b><p className="text-slate-500">{branch.address || "No address"}</p></div>)}</div></Card>
-      <Card className="p-4 md:p-5"><h2 className="font-semibold">Create staff profile</h2><p className="mt-1 text-xs text-slate-500">Create a login account first, then enter its user ID.</p><form onSubmit={createStaff} className="mt-4 grid gap-4"><Input name="auth_user_id" placeholder="Auth user UUID" required/><Input name="full_name" placeholder="Full name" required/><Input name="user_id" placeholder="Staff ID" required/><Input name="email" placeholder="Email" required/><Input name="phone" placeholder="Phone"/><Select name="role_key" defaultValue="owner">{roles.map((role) => <option key={role} value={role}>{role}</option>)}</Select><Select name="clinic_id" defaultValue={selectedClinic?.id ?? ""}>{clinics.map((clinic) => <option key={clinic.id} value={clinic.id}>{clinic.name}</option>)}</Select><Select name="branch_id" defaultValue={selectedClinicBranches[0]?.id ?? ""}><option value="">No branch</option>{selectedClinicBranches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</Select><Button type="submit" loading={saving}>Create staff profile</Button></form></Card>
+      <Card className="p-4 md:p-5"><h2 className="font-semibold">Create a login for a clinic</h2><p className="mt-1 text-xs text-slate-500">Creates the sign-in and the staff profile in one step. Start with the clinic's owner and admin.</p>
+        <form onSubmit={createLogin} className="mt-4 grid gap-4">
+          <Select aria-label="Clinic" value={loginTarget} onChange={(event) => { setLoginClinicId(event.target.value); setExtraClinicIds([]); }}>{clinics.map((clinic) => <option key={clinic.id} value={clinic.id}>{clinic.name}</option>)}</Select>
+          <Select aria-label="Role" value={loginRole} onChange={(event) => setLoginRole(event.target.value as CreateStaffLoginInput["role_key"])}>{(["owner", "admin", "doctor", "receptionist", "pharmacist"] as const).map((role) => <option key={role} value={role}>{role}</option>)}</Select>
+          <Input name="full_name" placeholder="Full name" required/><Input name="email" type="email" placeholder="Email (used to sign in)" required/>
+          <Input name="password" type="password" minLength={8} placeholder="Temporary password (min 8 characters)" autoComplete="new-password" required/><Input name="phone" placeholder="Phone"/>
+          {siblingClinics.length > 0 && <fieldset className="rounded-xl border p-3"><legend className="px-1 text-xs font-semibold text-slate-500">Also let them work in these clinics of the same brand</legend>{siblingClinics.map((clinic) => <label key={clinic.id} className="flex min-h-9 items-center gap-2 text-sm"><input type="checkbox" checked={extraClinicIds.includes(clinic.id)} onChange={() => setExtraClinicIds((current) => current.includes(clinic.id) ? current.filter((id) => id !== clinic.id) : [...current, clinic.id])}/>{clinic.name}</label>)}</fieldset>}
+          <Button type="submit" loading={saving} disabled={!loginTarget}>Create login</Button></form></Card>
     </div>
-    <Card className="mt-5 overflow-hidden"><div className="p-5"><h2 className="font-semibold">Staff users</h2><p className="text-xs text-slate-500">Staff profiles linked to login accounts</p></div><div className="table-wrap"><table className="data-table"><thead><tr><th>Name</th><th>Staff ID</th><th>Role</th><th>Clinic</th><th>Status</th><th>Action</th></tr></thead><tbody>{staff.map((user) => <tr key={user.id}><td className="font-semibold">{user.fullName}</td><td>{user.userId}</td><td>{user.role}</td><td>{clinics.find((clinic) => clinic.id === user.clinicId)?.name ?? "Platform"}</td><td><StatusPill status={user.status}/></td><td><div className="flex flex-wrap gap-2"><Button size="sm" variant="secondary" disabled={saving} onClick={() => void saveStaffAccess(user.id)}>Sync access</Button><Button size="sm" variant="secondary" disabled={saving} onClick={() => void setStaffStatus(user.id, user.status === "active" ? "suspended" : "active")}>{user.status === "active" ? "Suspend" : "Activate"}</Button></div></td></tr>)}</tbody></table></div></Card>
+    <Card className="mt-5 p-4 md:p-5"><h2 className="font-semibold">Share a person between clinics</h2><p className="mt-1 text-xs text-slate-500">One admin can look after several clinics of the same brand. They pick the clinic from the top bar.</p>
+      <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+        <Select aria-label="Person" value={shareStaffId} onChange={(event) => { setShareStaffId(event.target.value); setShareClinicId(""); }}><option value="">Choose a person</option>{staff.filter((user) => user.role !== "super_admin").map((user) => <option key={user.id} value={user.id}>{user.fullName} ({user.role})</option>)}</Select>
+        <Select aria-label="Clinic to add" value={shareClinicId} onChange={(event) => setShareClinicId(event.target.value)} disabled={!shareStaffId}><option value="">{shareStaffId && shareableClinics.length === 0 ? "No other clinics in their brand" : "Choose a clinic"}</option>{shareableClinics.map((clinic) => <option key={clinic.id} value={clinic.id}>{clinic.name}</option>)}</Select>
+        <Button loading={saving} disabled={!shareStaffId || !shareClinicId} onClick={() => void grantAccess()}>Give access</Button></div>
+      {shareStaffId && <ul className="mt-4 divide-y rounded-xl border">{access.filter((row) => row.staffId === shareStaffId).map((row) => <li key={row.clinicId} className="flex min-h-11 items-center justify-between gap-3 px-3 text-sm"><span>{clinics.find((clinic) => clinic.id === row.clinicId)?.name ?? row.clinicId}</span><Button size="sm" variant="secondary" disabled={saving} onClick={() => void revokeAccess(shareStaffId, row.clinicId)}>Remove</Button></li>)}</ul>}</Card>
+    <Card className="mt-5 overflow-hidden"><div className="p-5"><h2 className="font-semibold">Staff users</h2><p className="text-xs text-slate-500">Staff profiles linked to login accounts</p></div><div className="table-wrap"><table className="data-table"><thead><tr><th>Name</th><th>Staff ID</th><th>Role</th><th>Clinic</th><th>Status</th><th>Action</th></tr></thead><tbody>{staff.map((user) => <tr key={user.id}><td className="font-semibold">{user.fullName}</td><td>{user.userId}</td><td>{user.role}</td><td>{clinics.find((clinic) => clinic.id === user.clinicId)?.name ?? "Platform"}{access.filter((row) => row.staffId === user.id).length > 1 && <span className="ml-1 text-xs text-slate-500">+{access.filter((row) => row.staffId === user.id).length - 1} more</span>}</td><td><StatusPill status={user.status}/></td><td><div className="flex flex-wrap gap-2"><Button size="sm" variant="secondary" disabled={saving} onClick={() => void saveStaffAccess(user.id)}>Sync access</Button><Button size="sm" variant="secondary" disabled={saving} onClick={() => void setStaffStatus(user.id, user.status === "active" ? "suspended" : "active")}>{user.status === "active" ? "Suspend" : "Activate"}</Button></div></td></tr>)}</tbody></table></div></Card>
   </>;
 }

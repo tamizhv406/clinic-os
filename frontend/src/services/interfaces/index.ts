@@ -1,5 +1,6 @@
 export type { AuthService, StaffAuthContext } from "./auth.service";
 export type { ClinicService } from "./clinic.service";
+export type { BrandService, BrandRecord, MyClinic, ClinicAccessRecord, CreateClinicInput } from "./brand.service";
 export type { UserService, CreateStaffLoginInput } from "./user.service";
 export type { AppointmentService, AppointmentFilters, CreateAppointmentInput, DoctorScheduleResult } from "./appointment.service";
 export type { PatientService, PatientFilters } from "./patient.service";

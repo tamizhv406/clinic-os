@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { services } from "../../services/serviceProvider";
 import { Input } from "../common/Input";
+import { ClinicSwitcher } from "./ClinicSwitcher";
 import { StatusBadge } from "../common/StatusBadge";
 import type { PatientRecord } from "../../shared/types/domain";
 import type { UserRole } from "../../types/user";
@@ -19,6 +20,7 @@ export function Topbar({ role, openMenu }: { role: UserRole; openMenu: () => voi
   const [loggingOut, setLoggingOut] = useState(false);
   const [workspaceName, setWorkspaceName] = useState(role === "super_admin" ? "Vernex Platform" : "");
   const [userName, setUserName] = useState("");
+  const [hasSwitcher, setHasSwitcher] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PatientRecord[]>([]);
   const [searching, setSearching] = useState(false);
@@ -103,7 +105,8 @@ export function Topbar({ role, openMenu }: { role: UserRole; openMenu: () => voi
 
   return <header className="sticky top-0 z-20 flex h-16 items-center border-b border-slate-200 bg-white px-4 md:px-6">
     <button onClick={openMenu} className="mr-2 rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="Open menu"><Menu className="size-5" /></button>
-    <div className="hidden min-w-0 md:block"><p className="truncate text-sm font-semibold text-slate-900">{workspaceName || "Vernex Clinic OS"}</p><p className="text-xs text-slate-500">{today}</p></div>
+    <div className={`min-w-0 ${hasSwitcher ? "hidden xl:block" : "hidden md:block"}`}><p className="truncate text-sm font-semibold text-slate-900">{hasSwitcher ? today : workspaceName || "Vernex Clinic OS"}</p>{!hasSwitcher && <p className="text-xs text-slate-500">{today}</p>}</div>
+    {role !== "super_admin" && <ClinicSwitcher onAvailable={setHasSwitcher} />}
     {role === "doctor" && <div ref={searchRef} className="relative mx-auto hidden max-w-xl flex-1 px-6 lg:block">
       <label className="relative block"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><Input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={searchKeyDown} className="pl-9 pr-24" placeholder="Search patients by name or phone..." aria-label="Search patients" aria-expanded={query.trim().length >= 2} aria-controls="patient-search-results" aria-activedescendant={activeIndex >= 0 ? `patient-result-${activeIndex}` : undefined} />
       <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">⌘K / Ctrl K</kbd>
