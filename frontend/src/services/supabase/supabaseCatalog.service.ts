@@ -199,6 +199,9 @@ export const supabaseCatalogService: CatalogService = {
     };
     const { data, error } = await supabase.rpc("create_stock_purchase", { input: payload as Json });
     if (error) throw error;
+    // New stock may make previously unavailable prescription items fillable. Best effort:
+    // a failure here must not hide that the purchase itself was saved.
+    await (supabase as unknown as { rpc: (fn: string) => Promise<unknown> }).rpc("recheck_unavailable_pharmacy_items");
     const summary = (data ?? {}) as Record<string, unknown>;
     return {
       purchaseId: String(summary.purchase_id ?? ""),

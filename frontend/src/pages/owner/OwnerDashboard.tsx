@@ -1,3 +1,4 @@
+import { formatTime12 } from "../../utils/formatDate";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarCheck, CircleDollarSign, Clock3, Pill, UserPlus, Users, WalletCards, Waypoints } from "lucide-react";
@@ -96,7 +97,7 @@ export default function OwnerDashboard() {
             id: appointment.id,
             patientName: patientNames.get(appointment.patientId) ?? "Patient",
             doctorName: doctorNames.get(appointment.doctorId) ?? "Unassigned",
-            time: appointment.time || "-",
+            time: formatTime12(appointment.time) || "-",
             status: appointment.status,
           })),
         );
@@ -169,7 +170,7 @@ export default function OwnerDashboard() {
         {payments.length > 0 ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Reference</th><th>Patient</th><th>Mode</th><th className="numeric">Amount</th></tr></thead><tbody>{payments.map((payment) => <tr key={payment.id}><td className="text-slate-500">{payment.id}</td><td className="font-semibold">{payment.patientName}</td><td className="uppercase">{payment.mode}</td><td className="numeric font-semibold">{formatCurrency(payment.amount)}</td></tr>)}</tbody></table></div> : <div className="p-5"><EmptyState title="No payments recorded" description="Collected payments will appear here." /></div>}
       </Card>
       <Card className="overflow-hidden"><div className="p-5"><h2 className="font-semibold">Low stock medicines</h2><p className="text-xs text-slate-500">Items at or below reorder level</p></div>
-        {lowStock.length > 0 ? lowStock.map((medicine) => <div key={medicine.id} className="flex items-center justify-between border-t px-5 py-4"><div><p className="text-sm font-semibold">{medicine.name}</p><p className="text-xs text-slate-500">{medicine.category}{medicine.expiryDate ? ` Â· Exp. ${medicine.expiryDate}` : ""}</p></div><div className="text-right"><p className="text-sm font-semibold text-danger-700">{medicine.currentStock} left</p><p className="text-xs text-slate-400">Min {medicine.reorderLevel}</p></div></div>) : <div className="p-5"><EmptyState title="Stock levels are healthy" description="Medicines below their reorder level will appear here." /></div>}
+        {lowStock.length > 0 ? lowStock.map((medicine) => <div key={medicine.id} className="flex items-center justify-between border-t px-5 py-4"><div><p className="text-sm font-semibold">{medicine.name}</p><p className="text-xs text-slate-500">{medicine.category}{medicine.expiryDate ? ` · Exp. ${medicine.expiryDate}` : ""}</p></div><div className="text-right"><p className="text-sm font-semibold text-danger-700">{medicine.currentStock} left</p><p className="text-xs text-slate-400">Min {medicine.reorderLevel}</p></div></div>) : <div className="p-5"><EmptyState title="Stock levels are healthy" description="Medicines below their reorder level will appear here." /></div>}
       </Card>
     </div>
   </>;

@@ -211,7 +211,10 @@ export const supabasePharmacyDomainService: PharmacyDomainService = {
       const { error: createError } = await supabase.rpc("create_pharmacy_order_from_prescription", { prescription_id: id });
       if (createError) throw createError;
     }
-    return missing.length;
+    // Items flagged unavailable earlier may be fillable now (medicine added, stock received).
+    const { data: rechecked, error: recheckError } = await (supabase as unknown as { rpc: (fn: string) => Promise<{ data: number | null; error: { message: string } | null }> }).rpc("recheck_unavailable_pharmacy_items");
+    if (recheckError) throw new Error(recheckError.message);
+    return missing.length + Number(rechecked ?? 0);
   },
 
   async createCounterSale(input) {

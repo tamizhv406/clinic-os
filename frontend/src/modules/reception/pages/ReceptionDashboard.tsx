@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, CalendarPlus, UserPlus } from "lucide-react";
-import { Button, Card, ErrorState, LoadingSkeleton, PageHeader } from "../../../components/ui";
+import { toast } from "sonner";
+import { Button, Card, EmptyState, ErrorState, LoadingSkeleton, PageHeader } from "../../../components/ui";
 import { services } from "../../../services/serviceProvider";
-import type { AppointmentRecord, PatientRecord } from "../../../shared/types/domain";
+import type { AppointmentRecord, AppointmentStatus, PatientRecord } from "../../../shared/types/domain";
 import type { Tables } from "../../../shared/types/database.types";
 import { AppointmentTable } from "../components/AppointmentTable";
 import { PatientSearchPanel } from "../components/PatientSearchPanel";
 import { QuickActions } from "../components/QuickActions";
 import { QueueTokenCard } from "../components/QueueTokenCard";
 import { ReceptionStatsGrid } from "../components/ReceptionStatsGrid";
-import { WhatsAppBookingPanel } from "../components/WhatsAppBookingPanel";
 import type { Appointment, AppointmentSource, BillingShortcut, QueueItem, ReceptionStats } from "../types";
 import { loadPendingBills } from "../pendingBills";
 import { rupee } from "../utils";
@@ -31,6 +31,7 @@ export default function ReceptionDashboard() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [clinicName, setClinicName] = useState("");
+  const [firstName, setFirstName] = useState("");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [bills, setBills] = useState<BillingShortcut[]>([]);
@@ -92,7 +93,22 @@ export default function ReceptionDashboard() {
     void loadDashboard();
   }, [loadDashboard]);
 
+  useEffect(() => {
+    void services.auth.getCurrentAuthContext().then((context) => setFirstName(context.fullName.trim().split(/\s+/)[0] ?? "")).catch(() => undefined);
+  }, []);
+
+  const updateStatus = async (id: string, nextStatus: AppointmentStatus) => {
+    try {
+      await services.appointments.updateAppointmentStatus(id, nextStatus);
+      toast.success(nextStatus === "arrived" ? "Patient checked in." : "Appointment updated.");
+      await loadDashboard();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update appointment.");
+    }
+  };
+
   const today = localDateISO();
+  const todaysAppointments = appointments.filter((item) => item.date === today && item.status !== "cancelled");
   const now = new Date();
   const greeting = now.getHours() < 12 ? "Good morning" : now.getHours() < 18 ? "Good afternoon" : "Good evening";
 
@@ -128,8 +144,8 @@ export default function ReceptionDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`${greeting}, Reception`}
-        description={`${clinicName ? `${clinicName} · ` : ""}${stats.activeDoctors} doctors scheduled today`}
+        title={firstName ? `${greeting}, ${firstName}` : greeting}
+        description={`${clinicName ? `${clinicName} · ` : ""}${stats.activeDoctors} ${stats.activeDoctors === 1 ? "doctor" : "doctors"} scheduled today`}
         action={
           <div className="flex gap-2">
             <Button to="/reception/new-patient" icon={<UserPlus className="size-4" />}>
@@ -143,8 +159,19 @@ export default function ReceptionDashboard() {
       />
       <PatientSearchPanel />
       <ReceptionStatsGrid stats={stats} />
+      <Card className="p-4 md:p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-semibold">Today's appointments</h2>
+          <Link className="text-sm font-semibold text-brand-700" to="/reception/appointments">
+            Manage all
+          </Link>
+        </div>
+        {todaysAppointments.length > 0
+          ? <AppointmentTable appointments={todaysAppointments} onStatusChange={updateStatus} />
+          : <EmptyState title="No appointments today" description="Booked patients for today will appear here, ready to check in." />}
+      </Card>
       <QuickActions />
-      <div className="grid gap-4 xl:grid-cols-[1.3fr_.7fr]">
+      <div className="grid gap-4">
         <Card className="p-4 md:p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
@@ -155,23 +182,11 @@ export default function ReceptionDashboard() {
               Open Queue <ArrowRight className="inline size-4" />
             </Link>
           </div>
-          <div className="grid gap-4 lg:grid-cols-3">
-            {queue.map((item) => (
-              <QueueTokenCard key={item.id} item={item} />
-            ))}
-          </div>
+          {queue.length > 0
+            ? <div className="grid gap-4 lg:grid-cols-3">{queue.map((item) => <QueueTokenCard key={item.id} item={item} />)}</div>
+            : <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Nobody is waiting. Patients appear here as soon as you mark them Arrived.</p>}
         </Card>
-        <WhatsAppBookingPanel />
       </div>
-      <Card className="p-4 md:p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-semibold">Upcoming Appointments</h2>
-          <Link className="text-sm font-semibold text-brand-700" to="/reception/appointments">
-            Manage all
-          </Link>
-        </div>
-        <AppointmentTable appointments={appointments.slice(0, 4)} />
-      </Card>
       <Card className="p-4 md:p-5">
         <h2 className="font-semibold">Pending Billing</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-3">

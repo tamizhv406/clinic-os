@@ -1,0 +1,10 @@
+import { api } from "./_env.mjs";
+const users = await api("/auth/v1/admin/users?per_page=200");
+console.log("auth users:", users.status);
+for (const u of users.json?.users ?? []) console.log(" -", u.email, u.email_confirmed_at ? "confirmed" : "UNCONFIRMED");
+const staff = await api("/rest/v1/staff_profiles?select=email,role_key,status,clinic_id,user_id");
+console.log("staff_profiles:", staff.status);
+for (const s of Array.isArray(staff.json) ? staff.json : [staff.json]) console.log(" -", JSON.stringify(s));
+const clinics = await api("/rest/v1/clinics?select=id,name,slug,status");
+console.log("clinics:", clinics.status);
+for (const c of Array.isArray(clinics.json) ? clinics.json : [clinics.json]) console.log(" -", JSON.stringify(c));

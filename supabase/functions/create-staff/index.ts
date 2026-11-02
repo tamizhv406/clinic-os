@@ -17,11 +17,16 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// Mirrors public.admin_manageable_roles(). An admin onboards delivery staff only --
-// never another admin, owner, or super_admin.
+// Mirrors public.admin_manageable_roles(). A clinic admin onboards delivery staff
+// only -- never another admin, owner, or super_admin.
 const ADMIN_MANAGEABLE_ROLES = ["doctor", "receptionist", "pharmacist"];
 
+// A platform admin (super_admin) additionally hands a clinic its owner and admin.
+const SUPER_ADMIN_MANAGEABLE_ROLES = [...ADMIN_MANAGEABLE_ROLES, "owner", "admin"];
+
 const ROLE_CODE_PREFIX: Record<string, string> = {
+  owner: "OWN",
+  admin: "ADM",
   doctor: "DOC",
   receptionist: "REC",
   pharmacist: "PHAR",
@@ -33,6 +38,13 @@ type CreateStaffBody = {
   password?: string;
   phone?: string;
   role_key?: string;
+  // Which clinic the person lands in. Required for a platform admin (who has no
+  // clinic of their own); a clinic admin may name any clinic they have access to and
+  // otherwise gets their active one.
+  clinic_id?: string | null;
+  // Platform admin only: also give the new person access to these sibling clinics of
+  // the same brand (one admin looking after several branches).
+  extra_clinic_ids?: string[];
   branch_id?: string | null;
   user_id?: string;
   department?: string;
@@ -115,6 +127,8 @@ Deno.serve(async (request) => {
   if (callerProfile.role_key !== "admin" && callerProfile.role_key !== "super_admin") {
     return fail("Only a clinic admin can onboard staff.", 403);
   }
+  const isSuperAdmin = callerProfile.role_key === "super_admin";
+  const allowedRoles = isSuperAdmin ? SUPER_ADMIN_MANAGEABLE_ROLES : ADMIN_MANAGEABLE_ROLES;
 
   let body: CreateStaffBody;
   try {
@@ -132,17 +146,67 @@ Deno.serve(async (request) => {
   if (!email) return fail("Email is required.", 400);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("That email address is not valid.", 400);
   if (password.length < 8) return fail("Password must be at least 8 characters.", 400);
-  if (!ADMIN_MANAGEABLE_ROLES.includes(roleKey)) {
-    return fail(`Role must be one of: ${ADMIN_MANAGEABLE_ROLES.join(", ")}.`, 400);
+  if (!allowedRoles.includes(roleKey)) {
+    return fail(`Role must be one of: ${allowedRoles.join(", ")}.`, 400);
   }
 
-  // A super_admin has no clinic of their own, so there is nothing to place staff
-  // into. Onboarding for another clinic stays a platform-console action.
-  const clinicId = callerProfile.clinic_id;
-  if (!clinicId) return fail("Your account is not linked to a clinic.", 400);
+  // Resolve the target clinic. It comes from the body but is only honoured after
+  // checking the caller is actually allowed to act in that clinic.
+  const requestedClinic = body.clinic_id?.trim() || null;
+  const clinicId = requestedClinic ?? callerProfile.clinic_id;
+  if (!clinicId) {
+    return fail(isSuperAdmin ? "Choose the clinic this person belongs to." : "Your account is not linked to a clinic.", 400);
+  }
+  if (!isSuperAdmin) {
+    const { data: access } = await admin
+      .from("staff_clinic_access")
+      .select("clinic_id")
+      .eq("staff_id", callerProfile.id)
+      .eq("clinic_id", clinicId)
+      .maybeSingle();
+    if (!access) return fail("You do not have access to that clinic.", 403);
+  }
 
-  const { data: clinicRow, error: clinicError } = await admin.from("clinics").select("slug").eq("id", clinicId).single();
-  if (clinicError || !clinicRow) return fail("Could not resolve your clinic.", 500);
+  const { data: clinicRow, error: clinicError } = await admin
+    .from("clinics")
+    .select("slug, organization_id")
+    .eq("id", clinicId)
+    .maybeSingle();
+  if (clinicError) return fail(clinicError.message, 500);
+  if (!clinicRow) return fail("That clinic does not exist.", 404);
+
+  // Branch: an explicit one must belong to the clinic; otherwise the clinic's main
+  // branch (never the caller's branch -- they may be working in a different clinic).
+  let branchId: string | null = null;
+  if (body.branch_id) {
+    const { data: branch } = await admin.from("branches").select("id").eq("id", body.branch_id).eq("clinic_id", clinicId).maybeSingle();
+    if (!branch) return fail("That branch does not belong to the clinic.", 400);
+    branchId = branch.id;
+  } else {
+    const { data: main } = await admin
+      .from("branches")
+      .select("id")
+      .eq("clinic_id", clinicId)
+      .order("is_main", { ascending: false })
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    branchId = main?.id ?? null;
+  }
+
+  // Sibling clinics (platform admin only) must be in the same brand.
+  const extraClinicIds = isSuperAdmin ? [...new Set(body.extra_clinic_ids ?? [])].filter((id) => id && id !== clinicId) : [];
+  if (extraClinicIds.length > 0) {
+    if (!clinicRow.organization_id) return fail("That clinic does not belong to a brand.", 400);
+    const { data: siblings } = await admin
+      .from("clinics")
+      .select("id")
+      .in("id", extraClinicIds)
+      .eq("organization_id", clinicRow.organization_id);
+    if ((siblings ?? []).length !== extraClinicIds.length) {
+      return fail("Extra clinics must all belong to the same brand.", 400);
+    }
+  }
 
   // Reject a duplicate email before creating anything, so the caller gets a clear
   // message instead of a constraint violation halfway through.
@@ -180,7 +244,7 @@ Deno.serve(async (request) => {
     .insert({
       id: newUserId,
       clinic_id: clinicId,
-      branch_id: body.branch_id || callerProfile.branch_id || null,
+      branch_id: branchId,
       role_key: roleKey,
       full_name: fullName,
       user_id: staffCode,
@@ -192,6 +256,16 @@ Deno.serve(async (request) => {
     .select("*")
     .single();
   if (insertError) return rollback(insertError.message, 400);
+
+  if (extraClinicIds.length > 0) {
+    const { error: accessError } = await admin.from("staff_clinic_access").insert(
+      extraClinicIds.map((id) => ({ staff_id: newUserId, clinic_id: id, granted_by: callerProfile.id })),
+    );
+    if (accessError) {
+      await admin.from("staff_profiles").delete().eq("id", newUserId);
+      return rollback(accessError.message, 400);
+    }
+  }
 
   if (roleKey === "doctor") {
     const fee = Number(body.consultation_fee);

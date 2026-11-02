@@ -3,6 +3,7 @@ import { supabaseAuthService } from "./supabase/supabaseAuth.service";
 import { supabaseBillingDomainService } from "./supabase/supabaseBilling.service";
 import { supabaseBookingService } from "./supabase/supabaseBooking.service";
 import { supabaseCatalogService } from "./supabase/supabaseCatalog.service";
+import { supabaseBrandService } from "./supabase/supabaseBrand.service";
 import { supabaseClinicService } from "./supabase/supabaseClinic.service";
 import { supabaseDoctorDomainService } from "./supabase/supabaseDoctor.service";
 import { supabaseMonitoringService } from "./supabase/supabaseMonitoring.service";
@@ -20,6 +21,7 @@ import { supabaseWhatsAppService } from "./supabase/supabaseWhatsApp.service";
 export const services = {
   auth: supabaseAuthService,
   clinics: supabaseClinicService,
+  brands: supabaseBrandService,
   users: supabaseUserService,
   appointments: supabaseAppointmentService,
   patients: supabasePatientService,

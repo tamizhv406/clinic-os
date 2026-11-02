@@ -7,7 +7,11 @@ export type CreateStaffLoginInput = {
   email: string;
   password: string;
   phone?: string;
-  role_key: "doctor" | "receptionist" | "pharmacist";
+  role_key: "owner" | "admin" | "doctor" | "receptionist" | "pharmacist";
+  /** Target clinic. Required for a platform admin; a clinic admin may name any clinic they can access. */
+  clinic_id?: string | null;
+  /** Platform admin only: sibling clinics of the same brand the new person can also work in. */
+  extra_clinic_ids?: string[];
   branch_id?: string | null;
   user_id?: string;
   department?: string;

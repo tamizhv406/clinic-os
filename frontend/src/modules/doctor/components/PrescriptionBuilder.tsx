@@ -1,10 +1,12 @@
 import { StatusBadge } from "../../../components/common/StatusBadge";
 import { useEffect, useState } from "react";
 import { Plus, Send } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button, Textarea } from "../../../components/ui";
 import { services } from "../../../services/serviceProvider";
 import { localDateISO } from "../../../utils/formatDate";
+import { estimatePrescribedQuantity } from "../../../utils/prescriptionQuantity";
 import type { LabTest, Medicine, PatientProfile, PrescriptionItem, PrescriptionTemplate, WhatsAppDeliveryStatus } from "../types";
 import { LabTestSuggestionPanel } from "./LabTestSuggestionPanel";
 import { MedicineReminderSetup } from "./MedicineReminderSetup";
@@ -17,6 +19,7 @@ import { ReminderSchedulePreview } from "./ReminderSchedulePreview";
 
 const blank = (): PrescriptionItem => ({ id: crypto.randomUUID(), medicineName: "", dosage: "1 tablet", frequency: "1-0-1", timing: "After food", duration: "3 days", instructions: "", quantity: "" });
 export function PrescriptionBuilder({ patient }: { patient: PatientProfile }) {
+  const navigate = useNavigate();
   const [items, setItems] = useState<PrescriptionItem[]>([blank()]);
   const [favorites, setFavorites] = useState<Medicine[]>([]);
   const [templates, setTemplates] = useState<PrescriptionTemplate[]>([]);
@@ -125,7 +128,7 @@ export function PrescriptionBuilder({ patient }: { patient: PatientProfile }) {
           timing: item.timing,
           duration: item.duration,
           food_instruction: item.timing.toLowerCase().includes("before") ? "before_food" : "after_food",
-          quantity: item.quantity || null,
+          quantity: item.quantity || estimatePrescribedQuantity(item.dosage, item.frequency, item.duration) || null,
           instructions: item.instructions || null,
           sort_order: index,
           reminder_enabled: showReminders,
@@ -182,11 +185,20 @@ export function PrescriptionBuilder({ patient }: { patient: PatientProfile }) {
       setLoading(false);
     }
   };
-  // Complete Consultation = save (if needed) + finalize + send to pharmacy when ticked.
+  // Closing the visit: the consultation and its appointment must be marked completed, or
+  // the patient stays "with doctor" in every queue and report.
+  const closeVisit = async () => {
+    const [latest] = await services.doctor.getConsultationsByPatient(patient.id).catch(() => []);
+    if (latest && latest.status !== "completed" && latest.status !== "cancelled") await services.doctor.completeConsultation(latest.id);
+  };
+  // Complete Consultation = save (if needed) + finalize + send to pharmacy when ticked + close the visit.
   const completeConsultation = async () => {
     const doneMessage = sendToPharmacy ? "Consultation completed. Prescription sent to pharmacy." : "Consultation completed.";
     if (!savedPrescriptionId) {
-      if (await savePrescription({ finalize: true, send: sendToPharmacy })) toast.success(doneMessage);
+      if (await savePrescription({ finalize: true, send: sendToPharmacy })) {
+        try { await closeVisit(); toast.success(doneMessage); navigate("/doctor/queue"); }
+        catch (error) { toast.error(error instanceof Error ? error.message : "The prescription was saved, but the visit could not be closed."); }
+      }
       return;
     }
     setLoading(true);
@@ -196,7 +208,9 @@ export function PrescriptionBuilder({ patient }: { patient: PatientProfile }) {
         const row = await services.doctor.routePrescriptionToPharmacy(savedPrescriptionId);
         setPharmacyStatus(row.pharmacy_status ?? "sent_to_pharmacy");
       }
+      await closeVisit();
       toast.success(doneMessage);
+      navigate("/doctor/queue");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to complete the consultation.");
     } finally {

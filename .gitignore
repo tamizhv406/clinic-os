@@ -16,3 +16,12 @@ frontend/.env.local
 node_modules/
 dist/
 .vercel/
+
+# Local secrets (service role key etc.) - never commit
+scrips/
+scripts/.secret*
+.secret.env
+*.secret.env
+
+# Built from the guide with real passwords filled in - never commit
+docs/MANUAL_TEST_WALKTHROUGH.pdf

@@ -264,8 +264,9 @@ export const supabaseDoctorDomainService: DoctorDomainService = {
   },
 
   async getConsultationById(id) {
-    const { data, error } = await supabase.from("consultations").select("*").eq("id", id).single();
+    const { data, error } = await supabase.from("consultations").select("*").eq("id", id).maybeSingle();
     if (error) throw error;
+    if (!data) throw new Error("Consultation not found or not visible to this role.");
     return data;
   },
 
