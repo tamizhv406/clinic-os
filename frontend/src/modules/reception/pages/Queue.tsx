@@ -5,7 +5,7 @@ import { services } from "../../../services/serviceProvider";
 import type { AppointmentRecord, PatientRecord } from "../../../shared/types/domain";
 import type { Tables } from "../../../shared/types/database.types";
 import { QueueBoard } from "../components/QueueBoard";
-import type { QueueItem } from "../types";
+import type { AppointmentStatus, QueueItem } from "../types";
 
 type DoctorOption = Tables<"doctor_profiles"> & { label: string };
 
@@ -44,7 +44,17 @@ export default function Queue() {
 
   useEffect(() => { void loadQueue(); }, []);
 
-  return <div className="space-y-6"><PageHeader title="Live Queue" description="Readable token board for waiting, in-consultation, completed, and no-show patients." action={<Button loading={loading} onClick={() => void loadQueue()}>Refresh queue</Button>} /><QueueBoard items={items} /></div>;
+  const updateStatus = async (id: string, nextStatus: AppointmentStatus) => {
+    try {
+      await services.appointments.updateAppointmentStatus(id, nextStatus);
+      toast.success(nextStatus === "waiting" ? "Patient sent to the doctor." : nextStatus === "no_show" ? "Marked as no-show." : "Patient checked in.");
+      await loadQueue();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update appointment.");
+    }
+  };
+
+  return <div className="space-y-6"><PageHeader title="Live Queue" description="Readable token board for waiting, in-consultation, completed, and no-show patients." action={<Button loading={loading} onClick={() => void loadQueue()}>Refresh queue</Button>} /><QueueBoard items={items} onStatusChange={updateStatus} /></div>;
 }
 
 function mapQueueItem(appointment: AppointmentRecord, patient?: PatientRecord | null, doctor?: DoctorOption): QueueItem {
